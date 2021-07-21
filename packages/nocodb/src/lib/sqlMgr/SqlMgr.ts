@@ -1,13 +1,12 @@
 import fs from "fs";
-import fsExtra from 'fs-extra';
 import path from "path";
-
-import {Debug, SqlClientFactory, Result} from "nc-help";
-import inflection from 'inflection';
 import url from 'url'
-import slash from 'slash';
 
+import fsExtra from 'fs-extra';
 import importFresh from 'import-fresh';
+import inflection from 'inflection';
+import {Debug, Result, SqlClientFactory} from "nc-help";
+import slash from 'slash';
 // import debug from 'debug';
 
 const log = new Debug("SqlMgr");
@@ -101,7 +100,7 @@ export default class SqlMgr {
   private project_id: any;
   private _project: any;
   // @ts-ignore
-  private _migrator: any;
+  private _migrator: KnexMigrator;
   // @ts-ignore
   private logsRef: any;
   private currentProjectJson: any;
@@ -172,6 +171,7 @@ export default class SqlMgr {
     args.folder = slash(this.currentProjectFolder);
     const projectJson = {...this.currentProjectJson, envs: {...this.currentProjectJson.envs}};
 
+    // delete db credentials
     for (const env of Object.keys(projectJson.envs)) {
       projectJson.envs[env] = {...projectJson.envs[env], db: [...projectJson.envs[env].db]}
       for (let i = 0; i < projectJson.envs[env].db.length; i++) {
@@ -181,9 +181,15 @@ export default class SqlMgr {
             database: projectJson.envs[env].db[i].connection.database
           }
         }
-
       }
     }
+
+
+    // remove meta db credentials
+    if (projectJson.meta?.db) delete projectJson.meta.db;
+
+    // remove auth credentials
+    delete projectJson.auth;
 
     args.projectJson = projectJson;
     data.data.list[0] = args;
@@ -392,7 +398,7 @@ export default class SqlMgr {
       args.type = args.type || args.project.type;
 
       if (this.isDbConnectionProject(args.projectJson)) {
-
+        // ignore
       } else {
         await this.migrator().init(args);
         await this.migrator().sync(args);
@@ -820,7 +826,7 @@ export default class SqlMgr {
         migrationSteps: 9999,
         folder: this.currentProjectFolder
       };
-      console.log(`Migration up args for '${op}'`, migrationArgs);
+      // console.log(`Migration up args for '${op}'`, migrationArgs);
       await this.migrator().migrationsUp(migrationArgs);
     }
 
@@ -1063,7 +1069,6 @@ export default class SqlMgr {
     const client = await this.projectGetSqlClient(args);
     return client.raw(query);
   }
-
 
 
   public async projectChangeEnv(args) {

@@ -1,25 +1,31 @@
 <template>
-  <text-area-cell v-if="inputDetails.type === 'LongText'" :input-details="inputDetails"
-                   v-model="localState"></text-area-cell>
-  <password-field v-else-if="inputDetails.type === 'Password'"
-                  :input-details="inputDetails" v-model="localState"></password-field>
+  <text-area-cell
+    v-if="inputDetails.type === 'LongText'"
+    v-model="localState"
+    :input-details="inputDetails"
+  />
+  <password-field
+    v-else-if="inputDetails.type === 'Password'"
+    v-model="localState"
+    :input-details="inputDetails"
+  />
   <attachment
     v-else-if="inputDetails.type === 'Attachment'"
+    v-model="localState"
     :input-details="inputDetails"
-    v-model="localState"></attachment>
-  <text-field v-else :input-details="inputDetails" v-model="localState"></text-field>
+  />
+  <text-field v-else v-model="localState" :input-details="inputDetails" />
 </template>
 
 <script>
-import TextField from "@/components/project/appStore/inputs/textField";
-import EditableAttachmentCell from "@/components/project/spreadsheet/editableCell/editableAttachmentCell";
-import Attachment from "@/components/project/appStore/inputs/attachment";
-import TextAreaCell from "~/components/project/spreadsheet/editableCell/textAreaCell";
-import PasswordField from "@/components/project/appStore/inputs/passwordField";
+import TextField from '@/components/project/appStore/inputs/textField'
+import Attachment from '@/components/project/appStore/inputs/attachment'
+import PasswordField from '@/components/project/appStore/inputs/passwordField'
+import TextAreaCell from '~/components/project/spreadsheet/components/editableCell/textAreaCell'
 
 export default {
-  name: "FormInput",
-  components: {PasswordField, TextAreaCell, Attachment, EditableAttachmentCell, TextField},
+  name: 'FormInput',
+  components: { PasswordField, TextAreaCell, Attachment, TextField },
   props: {
     value: String,
     inputDetails: Object
@@ -30,9 +36,9 @@ export default {
         return this.value
       },
       set(val) {
-        this.$emit('input', val);
+        this.$emit('input', val)
       }
-    },
+    }
   }
 }
 </script>

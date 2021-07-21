@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
-import {IStorageAdapter, XcFile} from "nc-plugin";
+
 import {Client as MinioClient} from "minio";
+import {IStorageAdapter, XcFile} from "nc-plugin";
 
 export default class Minio implements IStorageAdapter {
 
@@ -71,7 +72,7 @@ export default class Minio implements IStorageAdapter {
       const tempFile = path.join(process.cwd(), 'temp.txt');
       const createStream = fs.createWriteStream(tempFile);
       createStream.end();
-      await this.fileCreate('/test.txt', {
+      await this.fileCreate('/nc-test-file.txt', {
         path: tempFile,
         mimetype: '',
         originalname: 'temp.txt',

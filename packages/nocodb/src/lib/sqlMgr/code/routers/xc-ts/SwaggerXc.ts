@@ -1,4 +1,5 @@
 import BaseRender from "../../BaseRender";
+
 import SwaggerTypes from "./SwaggerTypes";
 
 class SwaggerXc extends BaseRender {
@@ -12,7 +13,7 @@ class SwaggerXc extends BaseRender {
    * @param ctx.columns
    * @param ctx.relations
    */
-  constructor({dir, filename, ctx}:any) {
+  constructor({dir, filename, ctx}: any) {
     super({dir, filename, ctx});
   }
 
@@ -22,8 +23,7 @@ class SwaggerXc extends BaseRender {
   prepare() {
 
 
-    let data :any= {
-    };
+    let data: any = {};
 
     /* example of simple variable */
     data = this.ctx;
@@ -52,14 +52,14 @@ class SwaggerXc extends BaseRender {
    * @private
    */
   _renderDefinitions(args) {
-    let obj = this.getDefenitions(args);
+    const obj = this.getDefenitions(args);
 
     return JSON.stringify(obj);
 
   }
 
   getDefenitions(args) {
-    let obj = {
+    const obj = {
       [args._tn]: {
         type: 'object',
         properties: {}
@@ -69,8 +69,8 @@ class SwaggerXc extends BaseRender {
 
     const properties = obj[args._tn].properties;
 
-    for (let column of args.columns) {
-      const field:any = {};
+    for (const column of args.columns) {
+      const field: any = {};
 
       SwaggerTypes.setSwaggerType(column, field, args.dbType)
 
@@ -148,6 +148,24 @@ class SwaggerXc extends BaseRender {
                 "name": "fields",
                 "type": "String",
                 "description": "Comma separated fields from the model"
+              },
+              {
+                "in": "query",
+                "name": "bt",
+                "type": "String",
+                "description": "Comma separated parent table names(Belongs To)"
+              },
+              {
+                "in": "query",
+                "name": "hm",
+                "type": "String",
+                "description": "Comma separated child table names(Has Many)"
+              },
+              {
+                "in": "query",
+                "name": "mm",
+                "type": "String",
+                "description": "Comma separated child table names(Many to Many)"
               },
               {
                 "in": "query",

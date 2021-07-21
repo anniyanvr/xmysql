@@ -1,52 +1,47 @@
-import rolePermissions from "@/helpers/rolePermissions";
-import {mapGetters} from "vuex";
-import browserLang from 'browser-lang';
+import { mapGetters } from 'vuex'
 
 export default {
   data() {
     return {
       isHydrated: false,
-      drawer: null,
+      drawer: null
 
     }
   },
   computed: {
-    language() {
-
-      // const dummy = new Date();
-      // const offset = -dummy.getTimezoneOffset();
-
-      return browserLang({
-        languages: ["en", "ar", "nl", "fr", "de", "it", "ja", "ru", "es", "ca", "cs", "et", "lt", "no", "te", "ur", "zh-cn", "da", "tl", "el", "ms", "pl", "sr", "sv", "th", "bn", "zh-tw", "fi", "ko", "iw", "ml", "pt", "sk", "tg", "tr", "vi", "bg", "hr", "eo", "id", "lv", "mr", "ro", "sl", "ta", "uk", "kn", "hi"],
-        fallback: 'en',
-      });
+    isDark() {
+      return this.$vuetify && this.$vuetify.theme && this.$vuetify.theme.dark
+    },
+    isLight() {
+      return this.$vuetify && this.$vuetify.theme && this.$vuetify.theme.light
     },
     isThisMobile() { // just an example, could be one specific value if that's all you need
-      return this.isHydrated ? this.$vuetify && this.$vuetify.breakpoint && this.$vuetify.breakpoint.smAndDown : false;
+      return this.isHydrated ? this.$vuetify && this.$vuetify.breakpoint && this.$vuetify.breakpoint.smAndDown : false
     },
 
     isTool() {
-      return process.env && process.env.tool;
+      return process.env && process.env.tool
     },
     isDashboard() {
-      return this.$route
-        && this.$route.path
-        && (this.$route.path === '/nc' || this.$route.path === '/nc/' || this.$route.path.startsWith('/nc/'));
+      return this.$route &&
+        this.$route.path &&
+        (this.$route.path === '/nc' || this.$route.path === '/nc/' || this.$route.path.startsWith('/nc/'))
     },
+
     _meta() {
-      return this._isMac ? '⌘' : '^';
+      return this._isMac ? '⌘' : '^'
     },
     _isMac() {
-      return process.platform === 'darwin';
+      return process.platform === 'darwin'
     },
     _isWindows() {
-      return process.platform === 'win32';
+      return process.platform === 'win32'
     },
     _isDev() {
-      return process.env.NODE_ENV && process.env.NODE_ENV.toLowerCase().startsWith('dev');
+      return process.env.NODE_ENV && process.env.NODE_ENV.toLowerCase().startsWith('dev')
     },
     _isEE() {
-      return process.env.EE;
+      return process.env.EE
     },
     ...mapGetters({
       _isUIAllowed: 'users/GtrIsUIAllowed'
@@ -61,7 +56,7 @@ export default {
     //   //console.log('setting drawer to false');
     //   this.drawer = false;
     // }
-    //console.log('this.items', this.$store.getters.GtrPaidUser);
+    // console.log('this.items', this.$store.getters.GtrPaidUser);
     // this.items[1].show = !this.$store.getters.GtrPaidUser;
   },
   // methods: {
@@ -81,10 +76,10 @@ export default {
   // },
   methods: {
     upgradeToEE() {
-      this.$toast.info('Upgrade to Enterprise Edition').goAway(3000);
+      this.$toast.info('Upgrade to Enterprise Edition').goAway(3000)
     },
     comingSoon() {
-      this.$toast.info('Coming soon').goAway(3000);
+      this.$toast.info('Coming soon').goAway(3000)
     },
     async sqlOp(args, op, opArgs, cusHeaders, cusAxiosOptions, queryParams) {
       return this.$store.dispatch('sqlMgr/ActSqlOp', [args, op, opArgs, cusHeaders, cusAxiosOptions, queryParams])

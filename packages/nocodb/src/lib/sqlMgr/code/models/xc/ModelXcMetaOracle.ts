@@ -1,6 +1,6 @@
-import BaseRender from "../../BaseRender";
+import BaseModelXcMeta from "./BaseModelXcMeta";
 
-class ModelXcMetaOracle extends BaseRender {
+class ModelXcMetaOracle extends BaseModelXcMeta {
 
   /**
    * @param dir
@@ -130,9 +130,9 @@ class ModelXcMetaOracle extends BaseRender {
 
   getXcColumnsObject(args) {
 
-    let columnsArr = [];
+    const columnsArr = [];
 
-    for (let column of args.columns) {
+    for (const column of args.columns) {
       const columnObj = {
         validate: {
           func: [],
@@ -182,6 +182,7 @@ class ModelXcMetaOracle extends BaseRender {
     }
 
 
+    this.mapDefaultPrimaryValue(columnsArr);
     return columnsArr;
 
   }
@@ -329,8 +330,6 @@ class ModelXcMetaOracle extends BaseRender {
       case 'nclob':
         return 'string'
       case 'nvarchar2':
-
-      case 'octet':
       case 'oid':
       case 'pointer':
       case 'raw':
@@ -527,7 +526,7 @@ class ModelXcMetaOracle extends BaseRender {
     return str;
   }
 
-
+/*
   getObject() {
     return {
       tn: this.ctx.tn,
@@ -540,7 +539,7 @@ class ModelXcMetaOracle extends BaseRender {
       type: this.ctx.type,
     }
 
-  }
+  }*/
 
 }
 

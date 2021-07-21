@@ -1,54 +1,65 @@
 <template>
   <v-container fluid>
-
     <v-col
-      :class="{'col-md-8 offset-md-2 col-sm-10 offset-sm-1 col-12' : !edit}" style="position: relative">
-      <v-form
-        :class="{'mt-8 pt-8':!edit}"
-        ref="form"
-        v-model="valid">
-        <v-card class="elevation-5"
-                ref="mainCard">
-
-
+      :class="{ 'col-md-8 offset-md-2 col-sm-10 offset-sm-1 col-12': !edit }"
+      style="position: relative"
+    >
+      <v-form ref="form" v-model="valid" :class="{ 'mt-8 pt-8': !edit }">
+        <v-card ref="mainCard" class="elevation-5">
           <div
             v-if="!edit"
-            style="position: absolute;top:-30px;
-                  left:-moz-calc(50% - 30px);
-                  left:-webkit-calc(50% - 30px);
-                  left:calc(50% - 30px);
-                  z-index: 999;
-                  border-radius: 10px;
-                  "
+            style="
+              position: absolute;
+              top: -30px;
+              left: -moz-calc(50% - 30px);
+              left: -webkit-calc(50% - 30px);
+              left: calc(50% - 30px);
+              z-index: 999;
+              border-radius: 10px;
+            "
             class="primary"
           >
             <v-img
-              @dblclick="enableAllSchemas()"
               class="mx-auto"
               width="60"
               height="60"
               :src="require('@/assets/img/icons/512x512-trans.png')"
-            >
-            </v-img>
+              @dblclick="enableAllSchemas()"
+            />
           </div>
-          <v-toolbar flat color="" class="mb-3"
-                     style="width: 100%; border-bottom: 1px solid var(--v-backgroundColor-base)">
-
-            <v-toolbar-title class="title ">
-              <span v-if="edit">Edit Project</span><span v-else>Create Project</span>
+          <v-toolbar
+            flat
+            color=""
+            class="mb-3"
+            style="width: 100%; border-bottom: 1px solid var(--v-backgroundColor-base)"
+          >
+            <v-toolbar-title class="title">
+              <!-- Edit Project -->
+              <span v-if="edit">{{ $t('projects.ext_db.title.edit') }}</span>
+              <!-- Create Project -->
+              <span v-else>{{ $t('projects.ext_db.title.create') }}</span>
             </v-toolbar-title>
-            <v-spacer></v-spacer>
-            <x-btn tooltip="Cancel and Return"
-                   to="/"
-                   v-ge="['project','cancel']"
-                   class="elevation-20">Cancel
+            <v-spacer />
+            <!-- Cancel and Return -->
+            <x-btn
+              v-ge="['project', 'cancel']"
+              :tooltip="$t('projects.ext_db.button.cancel_tooltip')"
+              to="/"
+              class="elevation-20"
+            >
+              <!-- Cancel -->
+              {{ $t('projects.ext_db.button.cancel') }}
             </x-btn>
             <x-btn
+              v-ge="['project', 'save']"
               :disabled="!valid || !envStatusValid"
               class="primary"
-              v-ge="['project','save']"
-              @click="createOrUpdateProject()">
-              <span v-if="edit">Update & Restart</span><span v-else>Save Project</span>
+              @click="createOrUpdateProject()"
+            >
+              <!-- Update & Restart -->
+              <span v-if="edit">{{ $t('projects.ext_db.button.update_and_restart') }}</span>
+              <!-- Save Project -->
+              <span v-else>{{ $t('projects.ext_db.button.save_project') }}</span>
             </x-btn>
             <v-progress-linear
               v-if="projectReloading"
@@ -57,14 +68,12 @@
               color="success"
               indeterminate
               height="3"
-              style="top:-3px"
-            ></v-progress-linear>
-
+              style="top: -3px"
+            />
           </v-toolbar>
 
           <div ref="panelContainer" style="">
-
-            <api-overlay :project-created="projectCreated" v-show="projectReloading"></api-overlay>
+            <api-overlay v-show="projectReloading" :project-created="projectCreated" />
             <!--            <v-overlay absolute color="grey" opacity="0.4"-->
             <!--                       class="create-project-overlay">-->
 
@@ -140,29 +149,45 @@
             </div>-->
             <!--            </v-overlay>-->
 
-
             <v-container fluid>
               <v-row>
                 <v-col cols="12" class="mb-0 pb-0">
                   <div style="max-width: 360px" class="mx-auto mb-3">
+                    <!-- Enter Project Name -->
                     <v-text-field
                       ref="name"
-                      v-ge="['project','name']"
-                      :rules="form.titleRequiredRule" :height="20" v-model="project.title" label="Enter Project Name"
-                      autofocus>
+                      v-model="project.title"
+                      v-ge="['project', 'name']"
+                      :rules="form.titleRequiredRule"
+                      :height="20"
+                      :label="$t('projects.ext_db.project_name')"
+                      autofocus
+                    >
                       <!--                      <v-icon color="info" class="blink_me mt-n1" slot="prepend">-->
                       <!--                        mdi-lightbulb-on-->
                       <!--                      </v-icon>-->
                     </v-text-field>
 
-
-                    <label class="caption">Access Project via</label>
-                    <v-radio-group row hide-details dense v-model="project.projectType" class="mb-0 mt-0">
-                      <v-radio v-for="(type,i) in projectTypes" :key="type.value" :color="type.iconColor"
-                               :value="type.value">
-                        <template v-slot:label>
+                    <!-- Access Project via -->
+                    <label class="caption"> {{ $t('projects.ext_db.project_name') }}</label>
+                    <v-radio-group
+                      v-model="project.projectType"
+                      row
+                      hide-details
+                      dense
+                      class="mb-0 mt-0"
+                    >
+                      <v-radio
+                        v-for="(type, i) in projectTypes"
+                        :key="type.value"
+                        :color="type.iconColor"
+                        :value="type.value"
+                      >
+                        <template #label>
                           <v-chip :color="i ? colors[3] : colors[7]">
-                            <v-icon small class="mr-1">{{ type.icon }}</v-icon>
+                            <v-icon small class="mr-1">
+                              {{ type.icon }}
+                            </v-icon>
                             <span class="caption">{{ type.text }}</span>
                           </v-chip>
                         </template>
@@ -184,84 +209,115 @@
                                 </template>
 
                               </v-select>-->
-
-
                 </v-col>
 
-                <v-col cols="10" offset="1" v-show="isTitle"
-                       :class="{'mt-0 pt-0':!edit,'mt-3 pt-3':edit}">
+                <v-col
+                  v-show="isTitle"
+                  cols="10"
+                  offset="1"
+                  :class="{ 'mt-0 pt-0': !edit, 'mt-3 pt-3': edit }"
+                >
                   <!--            <h2 :class="{'text-center mb-2':!edit,'text-center mb-2 grey&#45;&#45;text':edit}">
                                 {{ project.title && project.title.toUpperCase() }}'s
                                 Environments</h2> -->
 
-                  <p :class="{'text-center mb-2 mt-3':!edit,'text-center mb-2 mt-3 grey--text':edit}">
-                    Database Credentials</p>
-                  <v-expansion-panels v-model="panel" focusable accordion="" class="elevation-20"
-                                      style="border: 1px solid white">
+                  <p
+                    :class="{
+                      'text-center mb-2 mt-3': !edit,
+                      'text-center mb-2 mt-3 grey--text': edit,
+                    }"
+                  >
+                    {{ $t('projects.ext_db.credentials') }}
+                  </p>
+                  <v-expansion-panels
+                    v-model="panel"
+                    focusable
+                    accordion=""
+                    class="elevation-20"
+                    style="border: 1px solid white"
+                  >
                     <v-expansion-panel
-
-                      v-for="(envData,envKey,panelIndex) in project.envs" :key="panelIndex"
-                      @change="onPanelToggle(panelIndex,envKey)"
+                      v-for="(envData, envKey, panelIndex) in project.envs"
+                      :key="panelIndex"
                       :ref="`panel${envKey}`"
+                      @change="onPanelToggle(panelIndex, envKey)"
                     >
                       <v-expansion-panel-header disable-icon-rotate>
                         <p class="pa-0 ma-0">
                           <!--                          <v-icon>mdi-test-tube</v-icon> &nbsp;-->
                           <!--                          <span class="title">&nbsp;<b>'{{ envKey }}'</b> environment : </span>-->
-                          <v-tooltip v-for="(db,tabIndex) in envData.db"
-                                     :key="tabIndex"
-                                     bottom
-                          >
-                            <template v-slot:activator="{ on }">
-                              <v-icon small @click.native.stop="showDBTabInEnvPanel(panelIndex,tabIndex)" v-on="on"
-                                      :color="getDbStatusColor(db)"
-                              >mdi-database
+                          <v-tooltip v-for="(db, tabIndex) in envData.db" :key="tabIndex" bottom>
+                            <template #activator="{ on }">
+                              <v-icon
+                                small
+                                :color="getDbStatusColor(db)"
+                                @click.native.stop="showDBTabInEnvPanel(panelIndex, tabIndex)"
+                                v-on="on"
+                              >
+                                mdi-database
                               </v-icon>
                             </template>
                             {{ getDbStatusTooltip(db) }}
                           </v-tooltip>
 
-                          <span class="caption" v-if="project.ui[envKey]" :class="project.ui[envKey].color + '--text'">
-                      <i>{{ project.ui[envKey].msg }}</i>
-                    </span>
-
-
-                          <x-btn small text v-if="panelIndex"
-                                 btn.class="float-right"
-                                 tooltip="Click here to remove environment"
-                                 @click.native.stop="removeEnv(envKey)"
-                                 v-ge="['project','env-delete']"
+                          <span
+                            v-if="project.ui[envKey]"
+                            class="caption"
+                            :class="project.ui[envKey].color + '--text'"
                           >
-                            <v-hover v-slot:default="{ hover }">
-                              <v-icon :color="hover ? 'error' : 'grey'" @click.native.stop="removeEnv(envKey)">
+                            <i>{{ project.ui[envKey].msg }}</i>
+                          </span>
+
+                          <x-btn
+                            v-if="panelIndex"
+                            v-ge="['project', 'env-delete']"
+                            small
+                            text
+                            btn.class="float-right"
+                            tooltip="Click here to remove environment"
+                            @click.native.stop="removeEnv(envKey)"
+                          >
+                            <v-hover v-slot="{ hover }">
+                              <v-icon
+                                :color="hover ? 'error' : 'grey'"
+                                @click.native.stop="removeEnv(envKey)"
+                              >
                                 mdi-delete
                               </v-icon>
                             </v-hover>
                           </x-btn>
                         </p>
-                        <template v-slot:actions>
-                          <v-tooltip bottom v-if="getEnvironmentStatusAggregated(envData.db)">
-                            <template v-slot:activator="{ on }">
-                              <v-icon v-on="on" color="green">mdi-check-circle</v-icon>
+                        <template #actions>
+                          <v-tooltip v-if="getEnvironmentStatusAggregated(envData.db)" bottom>
+                            <template #activator="{ on }">
+                              <v-icon color="green" v-on="on">
+                                mdi-check-circle
+                              </v-icon>
                             </template>
                             <span>Environment setup complete</span>
                           </v-tooltip>
-                          <v-tooltip bottom v-else-if="edit">
-                            <template v-slot:activator="{ on }">
-                              <v-icon v-on="on" color="orange">mdi-alert-circle</v-icon>
+                          <v-tooltip v-else-if="edit" bottom>
+                            <template #activator="{ on }">
+                              <v-icon color="orange" v-on="on">
+                                mdi-alert-circle
+                              </v-icon>
                             </template>
                             <span>Environment setup pending</span>
                           </v-tooltip>
-
                         </template>
                       </v-expansion-panel-header>
                       <v-expansion-panel-content eager>
                         <v-col>
                           <v-card flat="">
-                            <v-tabs height="34" v-model="databases[panelIndex]" background-color="">
-                              <v-tab v-for="(db,dbIndex) in project.envs[envKey].db" :key="dbIndex"
+                            <v-tabs v-model="databases[panelIndex]" height="34" background-color="">
+                              <v-tab
+                                v-for="(db, dbIndex) in project.envs[envKey].db"
+                                :key="dbIndex"
                               >
-                                <v-icon small>mdi-database</v-icon> &nbsp; <span class="text-capitalize caption">{{
+                                <v-icon small>
+                                  mdi-database
+                                </v-icon> &nbsp;
+                                <span class="text-capitalize caption">{{
                                   db.connection.database
                                 }}</span>
                               </v-tab>
@@ -281,58 +337,90 @@
                                                 </v-tooltip>
                   -->
                               <v-tabs-items v-model="databases[panelIndex]">
-                                <v-tab-item v-for="(db,dbIndex) in project.envs[envKey].db" :key="dbIndex">
+                                <v-tab-item
+                                  v-for="(db, dbIndex) in project.envs[envKey].db"
+                                  :key="dbIndex"
+                                >
                                   <v-card flat>
                                     <!--                            <form ref="form" class="pa-3">-->
                                     <v-container class="justify-center">
-
-
-                                      <v-row style="position:relative">
-
-
-                                        <v-overlay v-if="showMonaco[dbIndex]" absolute class="monaco-overlay">
+                                      <v-row style="position: relative">
+                                        <v-overlay
+                                          v-if="showMonaco[dbIndex]"
+                                          absolute
+                                          class="monaco-overlay"
+                                        >
                                           <v-container fluid class="h-100">
                                             <v-card style="position: relative" class="h-100">
-                                              <v-icon class="monaco-overlay-close pointer"
-                                                      color="error"
-                                                      @click="$set(showMonaco,dbIndex,false)">
+                                              <v-icon
+                                                class="monaco-overlay-close pointer"
+                                                color="error"
+                                                @click="$set(showMonaco, dbIndex, false)"
+                                              >
                                                 mdi-close-circle
                                               </v-icon>
 
-                                              <span class="ml-2 caption grey--text">Refer knex documentation <a
-                                                href="https://knexjs.org/#Installation-client" target="_blank"
-                                                class="grey--text">here</a> .</span>
+                                              <span
+                                                class="ml-2 caption grey--text"
+                                              >Refer knex documentation
+                                                <a
+                                                  href="https://knexjs.org/#Installation-client"
+                                                  target="_blank"
+                                                  class="grey--text"
+                                                >here</a>
+                                                .</span>
 
                                               <monaco-json-object-editor
-                                                style="height:calc(100% - 20px);width:100%"
-                                                v-model="project.envs[envKey].db[dbIndex]"></monaco-json-object-editor>
+                                                v-model="project.envs[envKey].db[dbIndex]"
+                                                style="height: calc(100% - 20px); width: 100%"
+                                              />
                                             </v-card>
                                           </v-container>
                                         </v-overlay>
 
                                         <v-col cols="4" class="py-0">
+                                          <!-- Database Type -->
                                           <v-select
-                                            v-ge="['project','env-db-change']"
+                                            v-model="client[dbIndex]"
+                                            v-ge="['project', 'env-db-change']"
                                             class="body-2 db-select"
                                             :items="Object.keys(databaseNames)"
-                                            v-model="client[dbIndex]"
-                                            label="Database Type"
-                                            @change="onDatabaseTypeChanged(client[dbIndex],db,dbIndex,envKey)"
-
+                                            :label="$t('projects.ext_db.credentials.db_type')"
+                                            @change="
+                                              onDatabaseTypeChanged(
+                                                client[dbIndex],
+                                                db,
+                                                dbIndex,
+                                                envKey
+                                              )
+                                            "
                                           >
-
-                                            <template v-slot:selection="{item}">
+                                            <template #selection="{ item }">
                                               <v-chip
                                                 small
-                                                :color="colors[Object.keys(databaseNames).indexOf(item) % colors.length]"
-                                                class="">{{ item }}
+                                                :color="
+                                                  colors[
+                                                    Object.keys(databaseNames).indexOf(item) %
+                                                    colors.length
+                                                  ]
+                                                "
+                                                class=""
+                                              >
+                                                {{ item }}
                                               </v-chip>
                                             </template>
 
                                             <template slot="item" slot-scope="data">
                                               <v-chip
-                                                :color="colors[Object.keys(databaseNames).indexOf(data.item) % colors.length]"
-                                                class="caption">{{ data.item }}
+                                                :color="
+                                                  colors[
+                                                    Object.keys(databaseNames).indexOf(data.item) %
+                                                    colors.length
+                                                  ]
+                                                "
+                                                class="caption"
+                                              >
+                                                {{ data.item }}
                                               </v-chip>
                                               <!--                                              <div class="d-flex flex-column mx-auto "-->
                                               <!--                                                   style="width:100%;border-bottom: 1px solid #ddd">-->
@@ -343,167 +431,291 @@
                                               <!--                                                  Coming soon</p>-->
                                               <!--                                              </div>-->
                                             </template>
-
                                           </v-select>
                                         </v-col>
-
-                                        <v-col class="py-0" v-if="db.client === 'sqlite3'">
+                                        <!-- SQLite File -->
+                                        <v-col v-if="db.client === 'sqlite3'" class="py-0">
                                           <v-text-field
-                                            :rules="form.folderRequiredRule"
                                             v-model="db.connection.connection.filename"
-                                            label="SQLite File"
-                                            v-ge="['project','env-db-file']"
-                                            @click="selectSqliteFile(db)">
-                                            <v-icon color="info" slot="prepend">
+                                            v-ge="['project', 'env-db-file']"
+                                            :rules="form.folderRequiredRule"
+                                            :label="$t('projects.ext_db.credentials.sqlite_file')"
+                                            @click="selectSqliteFile(db)"
+                                          >
+                                            <v-icon slot="prepend" color="info">
                                               mdi-file-outline
                                             </v-icon>
                                           </v-text-field>
-
                                         </v-col>
-
-                                        <v-col cols="4" v-if="db.client !== 'sqlite3'" class="py-0">
+                                        <!-- Host Address -->
+                                        <v-col v-if="db.client !== 'sqlite3'" cols="4" class="py-0">
                                           <v-text-field
-                                            v-ge="['project','env-db-host']"
-                                            class="body-2"
-                                            :rules="form.requiredRule"
                                             v-model="db.connection.host"
-                                            label="Host address"
-                                          ></v-text-field>
-                                        </v-col>
-                                        <v-col cols="4" class="py-0" v-if="db.client !== 'sqlite3'">
-                                          <v-text-field
+                                            v-ge="['project', 'env-db-host']"
                                             class="body-2"
-                                            v-ge="['project','env-db-port']"
-                                            v-model="db.connection.port"
-                                            label="Port number"
-                                            :rules="form.portValidationRule"
-                                          ></v-text-field>
-                                        </v-col>
-                                        <v-col cols="4" class="py-0" v-if="db.client !== 'sqlite3'">
-                                          <v-text-field
-                                            class="body-2"
-                                            v-ge="['project','env-db-user']"
                                             :rules="form.requiredRule"
-                                            v-model="db.connection.user"
-                                            label="Username"
-                                          ></v-text-field>
+                                            :label="$t('projects.ext_db.credentials.host_address')"
+                                          />
                                         </v-col>
-                                        <v-col cols="4" class="py-0" v-if="db.client !== 'sqlite3'">
+                                        <!-- Port Number -->
+                                        <v-col v-if="db.client !== 'sqlite3'" cols="4" class="py-0">
                                           <v-text-field
-                                            class="body-2 db-password"
-                                            :type="showPass[`${panelIndex}_${dbIndex}`] ?   'text' : 'password'"
+                                            v-model="db.connection.port"
+                                            v-ge="['project', 'env-db-port']"
+                                            class="body-2"
+                                            :label="$t('projects.ext_db.credentials.port')"
+                                            :rules="form.portValidationRule"
+                                          />
+                                        </v-col>
+                                        <!-- Username -->
+                                        <v-col v-if="db.client !== 'sqlite3'" cols="4" class="py-0">
+                                          <v-text-field
+                                            v-model="db.connection.user"
+                                            v-ge="['project', 'env-db-user']"
+                                            class="body-2"
+                                            :rules="form.requiredRule"
+                                            :label="$t('projects.ext_db.credentials.username')"
+                                          />
+                                        </v-col>
+                                        <!-- Password -->
+                                        <v-col v-if="db.client !== 'sqlite3'" cols="4" class="py-0">
+                                          <v-text-field
                                             :ref="`password${envKey}`"
-                                            v-ge="['project','env-db-password']"
                                             v-model="db.connection.password"
-                                            label="Password"
+                                            v-ge="['project', 'env-db-password']"
+                                            class="body-2 db-password"
+                                            :type="
+                                              showPass[`${panelIndex}_${dbIndex}`]
+                                                ? 'text'
+                                                : 'password'
+                                            "
+                                            :label="$t('projects.ext_db.credentials.password')"
                                           >
-                                            <template v-slot:append>
-                                              <v-icon small
-                                                      @click="$set(showPass,`${panelIndex}_${dbIndex}` , !showPass[`${panelIndex}_${dbIndex}`])"
-                                              >{{
-                                                  showPass[`${panelIndex}_${dbIndex}`] ? 'visibility_off' :
-                                                    'visibility'
+                                            <template #append>
+                                              <v-icon
+                                                small
+                                                @click="
+                                                  $set(
+                                                    showPass,
+                                                    `${panelIndex}_${dbIndex}`,
+                                                    !showPass[`${panelIndex}_${dbIndex}`]
+                                                  )
+                                                "
+                                              >
+                                                {{
+                                                  showPass[`${panelIndex}_${dbIndex}`]
+                                                    ? 'visibility_off'
+                                                    : 'visibility'
                                                 }}
                                               </v-icon>
                                             </template>
-
                                           </v-text-field>
                                         </v-col>
-                                        <v-col cols="4" class="py-0" v-if="db.client !== 'sqlite3'">
+                                        <!-- Database : create if not exists -->
+                                        <v-col v-if="db.client !== 'sqlite3'" cols="4" class="py-0">
                                           <v-text-field
+                                            v-model="db.connection.database"
+                                            v-ge="['project', 'env-db-name']"
                                             class="body-2 database-field"
                                             :rules="form.requiredRule"
-                                            v-model="db.connection.database"
-
-                                            v-ge="['project','env-db-name']"
-                                            label="Database : create if not exists"
-                                          ></v-text-field>
+                                            :label="$t('projects.ext_db.credentials.db_create_if_not_exists')"
+                                          />
                                         </v-col>
-                                        <v-col class="" v-if="db.client !== 'sqlite3'">
+                                        <v-col v-if="db.client !== 'sqlite3'" class="">
                                           <v-expansion-panels>
-                                            <v-expansion-panel
-                                              style="border: 1px solid wheat">
+                                            <v-expansion-panel style="border: 1px solid wheat">
                                               <v-expansion-panel-header>
-                                                <span class="grey--text caption">SSL & Advanced parameters</span>
+                                                <!-- SSL & Advanced parameters -->
+                                                <span class="grey--text caption">{{
+                                                  $t('projects.ext_db.credentials.advanced')
+                                                }}</span>
                                               </v-expansion-panel-header>
                                               <v-expansion-panel-content>
                                                 <v-card class="elevation-0">
                                                   <v-card-text>
                                                     <v-select
+                                                      v-model="db.ui.sslUse"
                                                       class="caption"
                                                       :items="Object.keys(sslUsage)"
-                                                      v-model="db.ui.sslUse"
                                                     >
-                                                      <template v-slot:item="{item}">
+                                                      <template #item="{ item }">
                                                         <span class="caption">{{ item }}</span>
                                                       </template>
                                                     </v-select>
 
                                                     <v-row class="pa-0 ma-0">
-                                                      <x-btn tooltip="Select .cert file"
-                                                             small
-                                                             color="primary"
-                                                             outlined
-                                                             @click="selectFile(db,'ssl', 'certFilePath')"
-                                                             class="elevation-5"
-                                                             v-ge="['project','env-db-cert']"
-                                                      >{{ db.ui.ssl.cert }}
+                                                      <input
+                                                        ref="certFilePath"
+                                                        type="file"
+                                                        class="d-none"
+                                                        @change="
+                                                          readFileContent(
+                                                            db,
+                                                            'ssl',
+                                                            'cert',
+                                                            dbIndex
+                                                          )
+                                                        "
+                                                      >
+                                                      <!-- Select .cert file -->
+                                                      <x-btn
+                                                        v-ge="['project', 'env-db-cert']"
+                                                        :tooltip="
+                                                          $t(
+                                                            'projects.ext_db.credentials.advanced.ssl.client_cert.toolip'
+                                                          )
+                                                        "
+                                                        small
+                                                        color="primary"
+                                                        outlined
+                                                        class="elevation-5"
+                                                        @click="
+                                                          selectFile(
+                                                            db,
+                                                            'ssl',
+                                                            'certFilePath',
+                                                            dbIndex
+                                                          )
+                                                        "
+                                                      >
+                                                        {{ db.ui.ssl.cert }}
                                                       </x-btn>
-                                                      <x-btn tooltip="Select .key file"
-                                                             small
-                                                             color="primary"
-                                                             outlined
-                                                             @click="selectFile(db,'ssl', 'keyFilePath')"
-                                                             v-ge="['project','env-db-key']"
-                                                             class="elevation-5"
-                                                      >{{ db.ui.ssl.key }}
+                                                      <!-- Select .key file -->
+                                                      <input
+                                                        ref="keyFilePath"
+                                                        type="file"
+                                                        class="d-none"
+                                                        @change="
+                                                          readFileContent(db, 'ssl', 'key', dbIndex)
+                                                        "
+                                                      >
+                                                      <x-btn
+                                                        v-ge="['project', 'env-db-key']"
+                                                        :tooltip="
+                                                          $t(
+                                                            'projects.ext_db.credentials.advanced.ssl.client_key.toolip'
+                                                          )
+                                                        "
+                                                        small
+                                                        color="primary"
+                                                        outlined
+                                                        class="elevation-5"
+                                                        @click="
+                                                          selectFile(
+                                                            db,
+                                                            'ssl',
+                                                            'keyFilePath',
+                                                            dbIndex
+                                                          )
+                                                        "
+                                                      >
+                                                        {{ db.ui.ssl.key }}
                                                       </x-btn>
-
-                                                      <x-btn tooltip="Select CA file"
-                                                             small
-                                                             color="primary"
-                                                             outlined
-                                                             @click="selectFile(db,'ssl', 'caFilePath')"
-                                                             v-ge="['project','env-db-ca']"
-                                                      >{{ db.ui.ssl.ca }}
+                                                      <!-- Select CA file -->
+                                                      <input
+                                                        ref="caFilePath"
+                                                        type="file"
+                                                        class="d-none"
+                                                        @change="
+                                                          readFileContent(db, 'ssl', 'ca', dbIndex)
+                                                        "
+                                                      >
+                                                      <x-btn
+                                                        v-ge="['project', 'env-db-ca']"
+                                                        :tooltip="
+                                                          $t(
+                                                            'projects.ext_db.credentials.advanced.ssl.server_ca.toolip'
+                                                          )
+                                                        "
+                                                        small
+                                                        color="primary"
+                                                        outlined
+                                                        @click="
+                                                          selectFile(
+                                                            db,
+                                                            'ssl',
+                                                            'caFilePath',
+                                                            dbIndex
+                                                          )
+                                                        "
+                                                      >
+                                                        {{ db.ui.ssl.ca }}
                                                       </x-btn>
-
                                                     </v-row>
 
                                                     <v-row>
                                                       <v-col>
+                                                        <!-- Inflection - Table name -->
                                                         <v-select
+                                                          v-model="db.meta.inflection.tn"
                                                           class="caption"
-                                                          label="Inflection - Table name"
+                                                          :label="
+                                                            $t(
+                                                              'projects.ext_db.credentials.advanced.inflection.table_name'
+                                                            )
+                                                          "
                                                           multiple
                                                           :items="['camelize']"
-                                                          v-model="db.meta.inflection.tn"
                                                         >
-                                                          <template v-slot:item="{item}">
+                                                          <template #item="{ item }">
                                                             <span class="caption">{{ item }}</span>
                                                           </template>
                                                         </v-select>
                                                       </v-col>
                                                       <v-col>
+                                                        <!-- Inflection - Column name -->
                                                         <v-select
+                                                          v-model="db.meta.inflection.cn"
                                                           class="caption"
-                                                          label="Inflection - Column name"
+                                                          :label="
+                                                            $t(
+                                                              'projects.ext_db.credentials.advanced.inflection.column_name'
+                                                            )
+                                                          "
                                                           multiple
                                                           :items="['camelize']"
-                                                          v-model="db.meta.inflection.cn"
                                                         >
-                                                          <template v-slot:item="{item}">
+                                                          <template #item="{ item }">
                                                             <span class="caption">{{ item }}</span>
                                                           </template>
                                                         </v-select>
                                                       </v-col>
-                                                      <v-col class="d-flex align-center flex-shrink-1 flex-grow-0">
-                                                        <x-btn small
-                                                               btn.class="text-capitalize"
-                                                               outlined
-                                                               @click="$set(showMonaco,dbIndex,!showMonaco[dbIndex])">
-                                                          <v-icon small class="mr-1">mdi-database-edit</v-icon>
-                                                          Edit connection JSON
+                                                      <v-col
+                                                        class="
+                                                          d-flex
+                                                          align-center
+                                                          flex-shrink-1 flex-grow-0
+                                                        "
+                                                      >
+                                                        <x-btn
+                                                          small
+                                                          btn.class="text-capitalize"
+                                                          :tooltip="
+                                                            $t(
+                                                              'projects.ext_db.credentials.advanced.button.edit_conn_json'
+                                                            )
+                                                          "
+                                                          outlined
+                                                          @click="
+                                                            $set(
+                                                              showMonaco,
+                                                              dbIndex,
+                                                              !showMonaco[dbIndex]
+                                                            )
+                                                          "
+                                                        >
+                                                          <v-icon
+                                                            small
+                                                            class="mr-1"
+                                                          >
+                                                            mdi-database-edit
+                                                          </v-icon>
+                                                          <!-- Edit connection JSON -->
+                                                          {{
+                                                            $t(
+                                                              'projects.ext_db.credentials.advanced.button.edit_conn_json'
+                                                            )
+                                                          }}
                                                         </x-btn>
                                                       </v-col>
                                                     </v-row>
@@ -516,22 +728,37 @@
                                       </v-row>
 
                                       <v-row class="text-right justify-end">
-                                        <x-btn tooltip="Test Database Connection"
-                                               outlined
-                                               small
-                                               v-ge="['project','env-db-test-connection']"
-                                               @click="testConnection(db,envKey,panelIndex)">
-                                          Test Database Connection
-                                        </x-btn>
-                                        <x-btn tooltip="Remove Database from environment"
-                                               text
-                                               small
-                                               v-if="dbIndex"
-                                               @click="removeDBFromEnv(db,envKey,panelIndex,dbIndex)"
-                                               v-ge="['project','env-db-delete']"
+                                        <!-- Test Database Connection -->
+                                        <x-btn
+                                          v-ge="['project', 'env-db-test-connection']"
+                                          :tooltip="
+                                            $t('projects.ext_db.credentials.button.test_db_conn')
+                                          "
+                                          outlined
+                                          small
+                                          @click="testConnection(db, envKey, panelIndex)"
                                         >
-                                          <v-hover v-slot:default="{ hover }">
-                                            <v-icon :color="hover ? 'error' : 'grey'">mdi-database-remove
+                                          <!-- Test Database Connection -->
+                                          {{ $t('projects.ext_db.credentials.button.test_db_conn') }}
+                                        </x-btn>
+                                        <!-- Remove Database from environment -->
+                                        <x-btn
+                                          v-if="dbIndex"
+                                          v-ge="['project', 'env-db-delete']"
+                                          :tooltip="
+                                            $t(
+                                              'projects.ext_db.credentials.button.remove_db_from_env'
+                                            )
+                                          "
+                                          text
+                                          small
+                                          @click="removeDBFromEnv(db, envKey, panelIndex, dbIndex)"
+                                        >
+                                          <v-hover v-slot="{ hover }">
+                                            <v-icon
+                                              :color="hover ? 'error' : 'grey'"
+                                            >
+                                              mdi-database-remove
                                             </v-icon>
                                           </v-hover>
                                         </x-btn>
@@ -546,7 +773,6 @@
                         </v-col>
                       </v-expansion-panel-content>
                     </v-expansion-panel>
-
 
                     <!--  <v-expansion-panel>
                         <v-expansion-panel-header disable-icon-rotate>
@@ -566,11 +792,8 @@
                           </template>
                         </v-expansion-panel-header>
                       </v-expansion-panel>-->
-
                   </v-expansion-panels>
-
                 </v-col>
-
 
                 <!--                <v-col cols="10" offset="1" v-show="isTitle"
                                        :class="{'mt-0 pt-0':!edit,'mt-3 pt-3':edit}">
@@ -611,7 +834,6 @@
                                                     </template>
 
                                                   </v-select>
-
 
                                                 </v-col>
                                                 <v-col cols="12" class="py-0" v-if="auth.authType && auth.authType !== 'none'">
@@ -694,11 +916,9 @@
                                       </v-expansion-panel-content>
                                     </v-expansion-panel>
 
-
                                   </v-expansion-panels>
 
                                 </v-col>
-
 
                                 <v-col cols="10" offset="1" v-show="isTitle"
                                        :class="{'mt-0 pt-0':!edit,'mt-3 pt-3':edit}">
@@ -709,99 +929,89 @@
             </v-container>
           </div>
         </v-card>
-
       </v-form>
-
-
     </v-col>
     <dlgOk
       v-if="dialog.show"
-      :dialogShow="dialog.show"
-      :mtdOk="dialog.mtdOk"
+      :dialog-show="dialog.show"
+      :mtd-ok="dialog.mtdOk"
       :heading="dialog.heading"
       :type="dialog.type"
     />
-
 
     <dlg-ok-new
       v-model="testSuccess"
       heading="Connection was successful"
       ok-label="Ok & Save Project"
-      @ok="createOrUpdateProject "
       type="success"
-      :btnAttr="{small:false, }"
+      :btn-attr="{ small: false }"
+      @ok="createOrUpdateProject"
     />
-
 
     <textDlgSubmitCancel
       v-if="dialogGetEnvName.dialogShow"
-      :dialogShow="dialogGetEnvName.dialogShow"
+      :dialog-show="dialogGetEnvName.dialogShow"
       :heading="dialogGetEnvName.heading"
-      :mtdDialogSubmit="mtdDialogGetEnvNameSubmit"
-      :mtdDialogCancel="mtdDialogGetEnvNameCancel"
+      :mtd-dialog-submit="mtdDialogGetEnvNameSubmit"
+      :mtd-dialog-cancel="mtdDialogGetEnvNameCancel"
     />
 
-
-    <div class="floating-button" v-if="isTitle && !edit">
+    <div v-if="isTitle && !edit" class="floating-button">
       <v-tooltip top>
-        <template v-slot:activator="{ on }">
-          <v-btn v-on="on" fab dark large tooltip="Scroll to top"
-                 :disabled="!valid || !envStatusValid"
-                 class="primary"
-                 v-ge="['project','save']"
-                 @click="createOrUpdateProject()">
-
+        <template #activator="{ on }">
+          <v-btn
+            v-ge="['project', 'save']"
+            fab
+            dark
+            large
+            tooltip="Scroll to top"
+            :disabled="!valid || !envStatusValid"
+            class="primary"
+            v-on="on"
+            @click="createOrUpdateProject()"
+          >
             <v-icon>save</v-icon>
           </v-btn>
         </template>
-        <span>
-        Save Project
-          </span>
+        <span> Save Project </span>
       </v-tooltip>
     </div>
-
   </v-container>
 </template>
 <script>
-import MonacoJsonEditor from "@/components/monaco/MonacoJsonEditor";
-import JSON5 from 'json5';
+import JSON5 from 'json5'
+import readFile from '@/helpers/fileReader'
 
-const {uniqueNamesGenerator, starWars, adjectives, animals} = require('unique-names-generator');
+import { mapGetters, mapActions } from 'vuex'
+import Vue from 'vue'
 
+import { v4 as uuidv4 } from 'uuid'
 
-import {mapGetters, mapActions, mapState, mapMutations} from "vuex";
-import Vue from 'vue';
-import textDlgSubmitCancel from "./utils/dlgTextSubmitCancel";
+import MonacoJsonObjectEditor from '@/components/monaco/MonacoJsonObjectEditor'
+import ApiOverlay from '@/components/apiOverlay'
+import colors from '@/mixins/colors'
+import DlgOkNew from '@/components/utils/dlgOkNew'
+import XBtn from './global/xBtn'
+import dlgOk from './utils/dlgOk.vue'
+import textDlgSubmitCancel from './utils/dlgTextSubmitCancel'
 
-import {v4 as uuidv4} from 'uuid';
-import dlgOk from "./utils/dlgOk.vue";
-import XBtn from "./global/xBtn";
-
-import axios from 'axios';
-import CreateProjectComingSoon from "@/components/createProjectComingSoon";
-import MonacoJsonObjectEditor from "@/components/monaco/MonacoJsonObjectEditor";
-import ApiOverlay from "@/components/apiOverlay";
-import colors from "@/mixins/colors";
-import DlgOkNew from "@/components/utils/dlgOkNew";
+const { uniqueNamesGenerator, starWars, adjectives, animals } = require('unique-names-generator')
 
 const homeDir = ''
 
 export default {
-  layout: 'empty',
 
   components: {
     DlgOkNew,
     ApiOverlay,
     MonacoJsonObjectEditor,
-    CreateProjectComingSoon,
-    MonacoJsonEditor,
     XBtn,
     dlgOk,
     textDlgSubmitCancel
   },
   mixins: [colors],
+  layout: 'empty',
   data() {
-
     return {
       testSuccess: false,
       projectCreated: false,
@@ -832,19 +1042,19 @@ export default {
         'Please wait..',
         'Please wait.',
         'Please wait..',
-        'Please wait...',
+        'Please wait...'
       ],
       loaderMessage: '',
       projectReloading: false,
       authTypes: [
-        {text: "JWT", value: "jwt"},
-        {text: "Master Key", value: "masterKey"},
-        {text: "Middleware", value: "middleware"},
-        {text: "Disabled", value: "none"},
+        { text: 'JWT', value: 'jwt' },
+        { text: 'Master Key', value: 'masterKey' },
+        { text: 'Middleware', value: 'middleware' },
+        { text: 'Disabled', value: 'none' }
       ],
       projectTypes: [
-        {text: 'REST APIs', value: 'rest', icon: 'mdi-json', iconColor: 'green'},
-        {text: 'GRAPHQL APIs', value: 'graphql', icon: 'mdi-graphql', iconColor: 'pink'},
+        { text: 'REST APIs', value: 'rest', icon: 'mdi-code-json', iconColor: 'green' },
+        { text: 'GRAPHQL APIs', value: 'graphql', icon: 'mdi-graphql', iconColor: 'pink' }
         // {
         //   text: 'Automatic gRPC APIs on database',
         //   value: 'grpc',
@@ -861,22 +1071,22 @@ export default {
       ],
 
       showPass: {},
-      /**************** START : form related ****************/
+      /** ************** START : form related ****************/
       form: {
-        portValidationRule: [v => /^\d+$/.test(v) || `Not a valid port`],
-        titleRequiredRule: [v => !!v || `Title is required`],
-        requiredRule: [v => !!v || `Field is required`],
-        folderRequiredRule: [v => !!v || `Folder path is required`]
+        portValidationRule: [v => /^\d+$/.test(v) || 'Not a valid port'],
+        titleRequiredRule: [v => !!v || 'Title is required'],
+        requiredRule: [v => !!v || 'Field is required'],
+        folderRequiredRule: [v => !!v || 'Folder path is required']
       },
       valid: null,
       panel: 0,
-      client: ["Sqlite"],
+      client: ['Sqlite'],
       baseFolder: homeDir,
 
       tab: null,
       env: null,
       databases: [],
-      /**************** END : form related ****************/
+      /** ************** END : form related ****************/
       auth: {
         authSecret: uuidv4(),
         authType: 'jwt',
@@ -888,41 +1098,41 @@ export default {
         version: '0.6',
         folder: homeDir,
         envs: {
-          "dev": {
+          dev: {
             db: [
               {
-                "client": "pg",
-                "connection": {
-                  "host": "localhost",
-                  "port": "5432",
-                  "user": "postgres",
-                  "password": "password",
-                  "database": "_dev",
+                client: 'pg',
+                connection: {
+                  host: 'localhost',
+                  port: '5432',
+                  user: 'postgres',
+                  password: 'password',
+                  database: '_dev',
                   ssl: {
-                    ca: "",
-                    key: "",
-                    cert: ""
+                    ca: '',
+                    key: '',
+                    cert: ''
                   }
                 },
-                "meta": {
-                  "tn": "nc_evolutions",
-                  "dbAlias": "db",
+                meta: {
+                  tn: 'nc_evolutions',
+                  dbAlias: 'db',
                   api: {
-                    type: "rest",
-                    prefix: "",
+                    type: 'rest',
+                    prefix: '',
                     graphqlDepthLimit: 10
                   },
                   inflection: {
                     tn: ['camelize'],
-                    cn: ['camelize'],
+                    cn: ['camelize']
                   }
                 },
                 ui: {
                   setup: -1,
                   ssl: {
-                    key: "Client Key",
-                    cert: "Client Cert",
-                    ca: "Server CA"
+                    key: this.$t('projects.ext_db.credentials.advanced.ssl.client_key'), // Client Key
+                    cert: this.$t('projects.ext_db.credentials.advanced.ssl.client_cert'), // Client Cert
+                    ca: this.$t('projects.ext_db.credentials.advanced.ssl.server_ca') // Server CA
                   },
                   sslUse: 'Preferred'
                 }
@@ -933,11 +1143,10 @@ export default {
             }
           }
         },
-        "workingEnv": "dev",
+        workingEnv: 'dev',
         ui: {
           envs: {
-            dev: {},
-
+            dev: {}
           }
         },
         meta: {
@@ -945,14 +1154,14 @@ export default {
           seedsFolder: 'seeds',
           queriesFolder: 'queries',
           apisFolder: 'apis',
-          projectType: "rest",
+          projectType: 'rest',
           type: 'mvc',
           language: 'ts'
         },
         seedsFolder: 'seeds',
         queriesFolder: 'queries',
         apisFolder: 'apis',
-        projectType: "rest",
+        projectType: 'rest',
         type: 'mvc',
         language: 'ts',
         apiClient: {
@@ -962,138 +1171,134 @@ export default {
 
       sampleConnectionData: {
         Postgres: {
-          "host": "localhost",
-          "port": "5432",
-          "user": "postgres",
-          "password": "password",
-          "database": "_test",
+          host: 'localhost',
+          port: '5432',
+          user: 'postgres',
+          password: 'password',
+          database: '_test',
           ssl: {
-            ca: "",
-            key: "",
-            cert: ""
+            ca: '',
+            key: '',
+            cert: ''
           }
         },
         MySQL: {
-          "host": "localhost",
-          "port": "3306",
-          "user": "root",
-          "password": "password",
-          "database": "_test",
+          host: 'localhost',
+          port: '3306',
+          user: 'root',
+          password: 'password',
+          database: '_test',
           ssl: {
-            ca: "",
-            key: "",
-            cert: ""
+            ca: '',
+            key: '',
+            cert: ''
           }
         },
         Vitess: {
-          "host": "localhost",
-          "port": "15306",
-          "user": "root",
-          "password": "password",
-          "database": "_test",
+          host: 'localhost',
+          port: '15306',
+          user: 'root',
+          password: 'password',
+          database: '_test',
           ssl: {
-            ca: "",
-            key: "",
-            cert: ""
+            ca: '',
+            key: '',
+            cert: ''
           }
         },
         TiDB: {
-          "host": "localhost",
-          "port": "4000",
-          "user": "root",
-          "password": "",
-          "database": "_test",
+          host: 'localhost',
+          port: '4000',
+          user: 'root',
+          password: '',
+          database: '_test',
           ssl: {
-            ca: "",
-            key: "",
-            cert: ""
+            ca: '',
+            key: '',
+            cert: ''
           }
         },
         Yugabyte: {
-          "host": "localhost",
-          "port": "5432",
-          "user": "postgres",
-          "password": "",
-          "database": "_test",
+          host: 'localhost',
+          port: '5432',
+          user: 'postgres',
+          password: '',
+          database: '_test',
           ssl: {
-            ca: "",
-            key: "",
-            cert: ""
+            ca: '',
+            key: '',
+            cert: ''
           }
         },
         CitusDB: {
-          "host": "localhost",
-          "port": "5432",
-          "user": "postgres",
-          "password": "",
-          "database": "_test",
+          host: 'localhost',
+          port: '5432',
+          user: 'postgres',
+          password: '',
+          database: '_test',
           ssl: {
-            ca: "",
-            key: "",
-            cert: ""
+            ca: '',
+            key: '',
+            cert: ''
           }
         },
         CockroachDB: {
-          "host": "localhost",
-          "port": "5432",
-          "user": "postgres",
-          "password": "",
-          "database": "_test",
+          host: 'localhost',
+          port: '5432',
+          user: 'postgres',
+          password: '',
+          database: '_test',
           ssl: {
-            ca: "",
-            key: "",
-            cert: ""
+            ca: '',
+            key: '',
+            cert: ''
           }
         },
         Greenplum: {
-          "host": "localhost",
-          "port": "5432",
-          "user": "postgres",
-          "password": "",
-          "database": "_test",
+          host: 'localhost',
+          port: '5432',
+          user: 'postgres',
+          password: '',
+          database: '_test',
           ssl: {
-            ca: "",
-            key: "",
-            cert: ""
+            ca: '',
+            key: '',
+            cert: ''
           }
         },
         MsSQL: {
-          "host": "localhost",
-          "port": 1433,
-          "user": "sa",
-          "password": "Password123.",
-          "database": "_test",
+          host: 'localhost',
+          port: 1433,
+          user: 'sa',
+          password: 'Password123.',
+          database: '_test',
           ssl: {
-            ca: "",
-            key: "",
-            cert: ""
+            ca: '',
+            key: '',
+            cert: ''
           }
         },
         Oracle: {
-          "host": "localhost",
-          "port": "1521",
-          "user": "system",
-          "password": "Oracle18",
-          "database": "_test",
+          host: 'localhost',
+          port: '1521',
+          user: 'system',
+          password: 'Oracle18',
+          database: '_test',
           ssl: {
-            ca: "",
-            key: "",
-            cert: ""
+            ca: '',
+            key: '',
+            cert: ''
           }
         },
         Sqlite: {
-          client: "sqlite3",
+          client: 'sqlite3',
           database: homeDir,
           connection: {
             filename: homeDir
           },
           useNullAsDefault: true
-
         }
-
       },
-
-
       dialog: {
         show: false,
         title: '',
@@ -1101,25 +1306,27 @@ export default {
         mtdOk: this.testConnectionMethodSubmit,
         type: 'primary'
       },
+      // TODO: apply i18n for sslUsage
+      // See projects.ext_db.credentials.advanced.ssl.usage.no - 5 in en.json
       sslUsage: {
-        No: "No",
-        Preferred: "Preferred",
-        Required: "pg",
-        "Required-CA": "Required-CA",
-        "Required-IDENTITY": "Required-IDENTITY"
+        No: 'No',
+        Preferred: 'Preferred',
+        Required: 'pg',
+        'Required-CA': 'Required-CA',
+        'Required-IDENTITY': 'Required-IDENTITY'
       },
-      sslUse: "Preferred",
+      sslUse: this.$t('projects.ext_db.credentials.advanced.ssl.preferred'), // Preferred
       ssl: {
-        key: "Client Key",
-        cert: "Client Cert",
-        ca: "Server CA"
+        key: this.$t('projects.ext_db.credentials.advanced.ssl.client_key'), // Client Key
+        cert: this.$t('projects.ext_db.credentials.advanced.ssl.client_cert'), // Client Cert
+        ca: this.$t('projects.ext_db.credentials.advanced.ssl.server_ca') // Server CA
       },
       databaseNames: {
-        MySQL: "mysql2",
-        Postgres: "pg",
+        MySQL: 'mysql2',
+        Postgres: 'pg',
         // Oracle: "oracledb",
-        MsSQL: "mssql",
-        Sqlite: "sqlite3",
+        MsSQL: 'mssql',
+        Sqlite: 'sqlite3'
         // Vitess: "mysql2",
         // TiDB: "mysql2",
         // Yugabyte: "pg",
@@ -1133,72 +1340,74 @@ export default {
         pg: 'postgres',
         oracledb: 'xe',
         mssql: undefined,
-        sqlite3: "a.sqlite"
+        sqlite3: 'a.sqlite'
       },
       dbIcons: {
-        Oracle: "temp/db/oracle.png",
-        Postgres: "temp/db/postgre.png",
-        MySQL: "temp/db/mysql.png",
-        MsSQL: "temp/db/mssql.png",
-        Sqlite: "temp/db/sqlite.svg",
-        'Salesforce': 'temp/salesforce-3-569548.webp',
-        'SAP': 'temp/sap.png',
-        'Stripe': 'temp/stripe.svg',
+        Oracle: 'temp/db/oracle.png',
+        Postgres: 'temp/db/postgre.png',
+        MySQL: 'temp/db/mysql.png',
+        MsSQL: 'temp/db/mssql.png',
+        Sqlite: 'temp/db/sqlite.svg',
+        Salesforce: 'temp/salesforce-3-569548.webp',
+        SAP: 'temp/sap.png',
+        Stripe: 'temp/stripe.svg'
       },
       dialogGetEnvName: {
         dialogShow: false,
-        heading: "Enter New Environment Name",
-        field: "Environment Name"
+        heading: 'Enter New Environment Name',
+        field: 'Environment Name'
       },
 
       compErrorMessages: [
-        'Invalid character in folder path.',
-        'Invalid database credentials.',
-        'Unable to connect to database, please check your database is up.',
-        'User does not exist or have sufficient permission to create schema.',
+        this.$t('projects.ext_db.error.invalid_char_in_folder_path'), // Invalid character in folder path
+        this.$t('projects.ext_db.error.invalid_db_credentials'), // Invalid database credentials
+        this.$t('projects.ext_db.error.unable_to_connect_to_db'), // Unable to connect to database, please check your database is up
+        this.$t('projects.ext_db.error.user_doesnt_ve_sufficient_permission') // User does not exist or have sufficient permission to create schema
       ],
       compErrorMessage: ''
     }
   },
   computed: {
-    ...mapGetters({sqlMgr: "sqlMgr/sqlMgr"}),
+    ...mapGetters({ sqlMgr: 'sqlMgr/sqlMgr' }),
     isTitle() {
-      return this.project.title && this.project.title.trim().length;
+      return this.project.title && this.project.title.trim().length
     },
     envStatusValid() {
-      return this.project.envs && Object.values(this.project.envs).every(this.getEnvironmentStatusAggregatedNew)
+      return (
+        this.project.envs &&
+        Object.values(this.project.envs).every(this.getEnvironmentStatusAggregatedNew)
+      )
     },
     typeIcon() {
       if (this.project.projectType) {
-        return this.projectTypes.find(({value}) => value === this.project.projectType)
+        return this.projectTypes.find(({ value }) => value === this.project.projectType)
       } else {
-        return {'icon': 'mdi-server', iconColor: 'primary'}
+        return { icon: 'mdi-server', iconColor: 'primary' }
       }
     },
     databaseNamesReverse() {
       return Object.entries(this.databaseNames).reduce((newObj, [value, key]) => {
-        newObj[key] = value;
-        return newObj;
+        newObj[key] = value
+        return newObj
       }, {})
     }
   },
   methods: {
     async enableAllSchemas() {
-      this.$toast.info('Enabled all schemas').goAway(3000);
-      this.allSchemas = true;
+      this.$toast.info('Enabled all schemas').goAway(3000)
+      this.allSchemas = true
       await this.$axios({
         url: 'demo',
-        baseURL: process.env.NODE_ENV === 'production' ? './' : 'http://localhost:8080/dashboard',
-      });
+        baseURL: `${this.$axios.defaults.baseURL}/dashboard`
+      })
     },
 
-
     ...mapActions({
-      loadProjects: "project/loadProjects",
+      loadProjects: 'project/loadProjects'
     }),
     onAdvancePanelToggle() {
       if (this.$refs.monacoEditor) {
-        setTimeout(() => this.$refs.monacoEditor.resizeLayout(), 400);
+        setTimeout(() => this.$refs.monacoEditor.resizeLayout(), 400)
       }
     },
     getProjectEditTooltip() {
@@ -1207,75 +1416,91 @@ export default {
     openJsonInSystemEditor() {
       // shell.openItem(path.join(this.project.folder, 'config.xc.json'));
     },
+    readFileContent(db, obj, key, index) {
+      readFile(this.$refs[`${key}FilePath`][index], (data) => {
+        Vue.set(db.connection[obj], key, data)
+      })
+    },
+    selectFile(db, obj, key, index) {
+      this.$refs[key][index].click()
 
-    selectFile(db, obj, key) {
       // console.log(obj, key);
-      const file = dialog.showOpenDialog({
-        properties: ["openFile"]
-      });
-      console.log(typeof file, file, typeof file[0]);
-      if (file && file[0]) {
-        let fileName = path.basename(file[0]);
-        db.ui[obj][key] = fileName;
-        Vue.set(db.ui[obj], key, fileName)
-        //db.connection[obj][key] = file[0].toString();
-        Vue.set(db.connection[obj], key, file[0].toString())
-      }
+      // const file = dialog.showOpenDialog({
+      //   properties: ["openFile"]
+      // });
+      // console.log(typeof file, file, typeof file[0]);
+      // if (file && file[0]) {
+      //   let fileName = path.basename(file[0]);
+      //   db.ui[obj][key] = fileName;
+      //   Vue.set(db.ui[obj], key, fileName)
+      //   //db.connection[obj][key] = file[0].toString();
+      //   Vue.set(db.connection[obj], key, file[0].toString())
+      // }
     },
     onPanelToggle(panelIndex, envKey) {
       this.$nextTick(() => {
         if (this.panel !== undefined) {
-          const panelContainer = this.$refs.panelContainer;
-          const panel = this.$refs[`panel${envKey}`][0].$el;
-          setTimeout(() => panelContainer.scrollTop = (panel.getBoundingClientRect().top + panelContainer.scrollTop) - panelContainer.getBoundingClientRect().top - 50, 500);
-          setTimeout(() => this.$refs[`password${envKey}`][0].focus());
+          const panelContainer = this.$refs.panelContainer
+          const panel = this.$refs[`panel${envKey}`][0].$el
+          setTimeout(
+            () =>
+              (panelContainer.scrollTop =
+                panel.getBoundingClientRect().top +
+                panelContainer.scrollTop -
+                panelContainer.getBoundingClientRect().top -
+                50),
+            500
+          )
+          setTimeout(() => this.$refs[`password${envKey}`][0].focus())
         }
       })
     },
     scrollToTop() {
-      document.querySelector('html').scrollTop = 0;
+      document.querySelector('html').scrollTop = 0
     },
     showDBTabInEnvPanel(panelIndex, tabIndex) {
-      this.panel = panelIndex;
-      Vue.set(this.databases, panelIndex, tabIndex);
+      this.panel = panelIndex
+      Vue.set(this.databases, panelIndex, tabIndex)
     },
     getProjectJson() {
-
-      console.log('Project json before creating', this.project);
+      console.log('Project json before creating', this.project)
 
       /**
        * remove UI keys within project
        */
-      let xcConfig = JSON.parse(JSON.stringify(this.project));
-      console.log(JSON.stringify(this.project));
-      console.log('Project json after parsing', xcConfig);
-      delete xcConfig.ui;
+      const xcConfig = JSON.parse(JSON.stringify(this.project))
+      console.log(JSON.stringify(this.project))
+      console.log('Project json after parsing', xcConfig)
+      delete xcConfig.ui
 
-
-      for (let env in xcConfig.envs) {
+      for (const env in xcConfig.envs) {
         for (let i = 0; i < xcConfig.envs[env].db.length; ++i) {
-          xcConfig.envs[env].db[i].meta.api.type = this.project.projectType;
-          console.log('getProjectJson:', env, i, xcConfig.envs[env].db[i]);
-          if (xcConfig.envs[env].db[i].client === 'mysql' || xcConfig.envs[env].db[i].client === 'mysql2') {
-            xcConfig.envs[env].db[i].connection.multipleStatements = true;
+          xcConfig.envs[env].db[i].meta.api.type = this.project.projectType
+          console.log('getProjectJson:', env, i, xcConfig.envs[env].db[i])
+          if (
+            xcConfig.envs[env].db[i].client === 'mysql' ||
+            xcConfig.envs[env].db[i].client === 'mysql2'
+          ) {
+            xcConfig.envs[env].db[i].connection.multipleStatements = true
           }
-          this.handleSSL(xcConfig.envs[env].db[i], false);
-          delete xcConfig.envs[env].db[i].ui;
+          this.handleSSL(xcConfig.envs[env].db[i], false)
+          delete xcConfig.envs[env].db[i].ui
           if (this.client[i] === 'Vitess') {
-            xcConfig.envs[env].db[i].meta.dbtype = 'vitess';
+            xcConfig.envs[env].db[i].meta.dbtype = 'vitess'
           }
           if (this.client[i] === 'TiDB') {
-            xcConfig.envs[env].db[i].meta.dbtype = 'tidb';
+            xcConfig.envs[env].db[i].meta.dbtype = 'tidb'
           }
           if (xcConfig.envs[env].db[i].client === 'oracledb') {
             xcConfig.envs[env].db[i].pool = {
-              min: 0, max: 50
-            };
+              min: 0,
+              max: 50
+            }
 
-            xcConfig.envs[env].db[i].acquireConnectionTimeout = 60000;
+            xcConfig.envs[env].db[i].acquireConnectionTimeout = 60000
           }
 
-          const inflectionObj = xcConfig.envs[env].db[i].meta.inflection;
+          const inflectionObj = xcConfig.envs[env].db[i].meta.inflection
 
           if (inflectionObj) {
             if (Array.isArray(inflectionObj.tn)) {
@@ -1285,114 +1510,109 @@ export default {
               inflectionObj.cn = inflectionObj.cn.join(',')
             }
 
-            inflectionObj.tn = inflectionObj.tn || 'none';
-            inflectionObj.cn = inflectionObj.cn || 'none';
-
+            inflectionObj.tn = inflectionObj.tn || 'none'
+            inflectionObj.cn = inflectionObj.cn || 'none'
           }
 
           if (this.allSchemas) {
-            delete xcConfig.envs[env].db[i].connection.database;
-            xcConfig.envs[env].db[i].meta.allSchemas = true;
+            delete xcConfig.envs[env].db[i].connection.database
+            xcConfig.envs[env].db[i].meta.allSchemas = true
           }
-
-
         }
       }
 
-      xcConfig.auth = {};
+      xcConfig.auth = {}
       switch (this.auth.authType) {
-        case "jwt":
+        case 'jwt':
           xcConfig.auth.jwt = {
             secret: this.auth.authSecret,
             dbAlias: xcConfig.envs[Object.keys(xcConfig.envs)[0]].db[0].meta.dbAlias
-          };
-          break;
-        case "masterKey":
+          }
+          break
+        case 'masterKey':
           xcConfig.auth.masterKey = {
             secret: this.auth.authSecret
-          };
-          sessionStorage.setItem('masterKey', this.auth.authSecret);
-          break;
-        case "middleware":
+          }
+          sessionStorage.setItem('masterKey', this.auth.authSecret)
+          break
+        case 'middleware':
           xcConfig.auth.masterKey = {
             url: this.auth.webhook
-          };
-          break;
+          }
+          break
         default:
-          this.auth.disabled = true;
-          break;
+          this.auth.disabled = true
+          break
       }
 
-      xcConfig.type = this.$store.state.project.projectInfo ? this.$store.state.project.projectInfo.type : 'docker';
+      xcConfig.type = this.$store.state.project.projectInfo
+        ? this.$store.state.project.projectInfo.type
+        : 'docker'
 
-
-      if (this.smtpConfiguration && this.smtpConfiguration.from && this.smtpConfiguration.options.trim()) {
+      if (
+        this.smtpConfiguration &&
+        this.smtpConfiguration.from &&
+        this.smtpConfiguration.options.trim()
+      ) {
         try {
           xcConfig.mailer = {
             options: JSON5.parse(this.smtpConfiguration.options),
             from: this.smtpConfiguration.from
           }
-        } catch (e) {
+        } catch (e) {}
+      }
+
+      xcConfig.meta = xcConfig.meta || {}
+      xcConfig.meta.db = {
+        client: 'sqlite3',
+        connection: {
+          filename: 'xc.db'
         }
       }
 
-
-      xcConfig.meta = xcConfig.meta || {};
-      xcConfig.meta.db = {
-        "client": "sqlite3",
-        "connection": {
-          "filename": "xc.db"
-        },
-      }
-
-
-      console.log('Project json : after', xcConfig);
-      return xcConfig;
-
+      console.log('Project json : after', xcConfig)
+      return xcConfig
     },
 
     constructProjectJsonFromProject(project) {
-
       // const {projectJson: envs, ...rest} = project;
 
       // let p = {...rest, ...envs};
-      let p = project //JSON.parse(JSON.stringify(project.projectJson));
+      const p = project // JSON.parse(JSON.stringify(project.projectJson));
 
       p.ui = {
         envs: {
-          dev: {},
+          dev: {}
         }
-      };
-      for (let env in p.envs) {
-        let i = 0;
-        for (let db of p.envs[env].db) {
-
-          Vue.set(this.client, i++, this.databaseNamesReverse[db.client]);
+      }
+      for (const env in p.envs) {
+        let i = 0
+        for (const db of p.envs[env].db) {
+          Vue.set(this.client, i++, this.databaseNamesReverse[db.client])
 
           Vue.set(db, 'ui', {
             setup: 0,
             ssl: {
-              key: "Client Key",
-              cert: "Client Cert",
-              ca: "Server CA"
+              key: this.$t('projects.ext_db.credentials.advanced.ssl.client_key'), // Client Key
+              cert: this.$t('projects.ext_db.credentials.advanced.ssl.client_cert'), // Client Cert
+              ca: this.$t('projects.ext_db.credentials.advanced.ssl.server_ca') // Server CA
             },
-            sslUse: 'Preferred'
-          });
+            sslUse: this.$t('projects.ext_db.credentials.advanced.ssl.preferred') // Preferred
+          })
         }
       }
       // delete p.projectJson;
 
-
       if (p.auth) {
         if (p.auth.jwt) {
           this.auth.authType = 'jwt'
-          this.auth.authSecret = p.auth.jwt.secret;
+          this.auth.authSecret = p.auth.jwt.secret
         } else if (p.auth.masterKey) {
           if (p.auth.masterKey.secret) {
-            this.auth.authSecret = p.auth.masterKey.secret;
+            this.auth.authSecret = p.auth.masterKey.secret
             this.auth.authType = 'masterKey'
           } else if (p.auth.masterKey.url) {
-            this.auth.webhook = p.auth.masterKey.url;
+            this.auth.webhook = p.auth.masterKey.url
             this.auth.authType = 'middleware'
           } else {
             this.auth.authType = 'none'
@@ -1404,46 +1624,43 @@ export default {
         this.auth.authType = 'none'
       }
 
-
-      this.project = p;
+      this.project = p
       if (p.mailer) {
         this.smtpConfiguration = {
           from: p.mailer.from,
           options: JSON.stringify(p.mailer.options, 0, 2)
         }
       }
-      delete p.mailer;
-
+      delete p.mailer
     },
 
-
     async createOrUpdateProject() {
-      const projectJson = this.getProjectJson();
-      delete projectJson.folder;
+      const projectJson = this.getProjectJson()
+      delete projectJson.folder
 
-      let i = 0;
-      const toast = this.$toast.info(this.loaderMessages[0]);
+      let i = 0
+      const toast = this.$toast.info(this.loaderMessages[0])
       const interv = setInterval(() => {
-        if(this.edit) return
-        if (i < this.loaderMessages.length - 1) i++;
+        if (this.edit) { return }
+        if (i < this.loaderMessages.length - 1) { i++ }
         if (toast) {
           if (!this.allSchemas) {
             toast.text(this.loaderMessages[i])
           } else {
-            toast.goAway(100);
+            toast.goAway(100)
           }
         }
-      }, 1000);
+      }, 1000)
 
-      this.projectReloading = true;
+      this.projectReloading = true
 
-      let result = await this.$store.dispatch('sqlMgr/ActSqlOp', [
+      const result = await this.$store.dispatch('sqlMgr/ActSqlOp', [
         {
           query: {
             skipProjectHasDb: 1
           }
         },
-        this.edit ? 'projectUpdateByWeb' : "projectCreateByWeb",
+        this.edit ? 'projectUpdateByWeb' : 'projectCreateByWeb',
         {
           project: {
             title: projectJson.title,
@@ -1451,20 +1668,16 @@ export default {
             type: 'pg'
           },
           projectJson
-        }]);
+        }
+      ])
 
-      clearInterval(interv);
-      toast.goAway(100);
-      console.log(
-        "project created redirect to project page",
-        projectJson,
-        result,
-      );
+      clearInterval(interv)
+      toast.goAway(100)
+      console.log('project created redirect to project page', projectJson, result)
 
+      await this.$store.dispatch('project/ActLoadProjectInfo')
 
-      await this.$store.dispatch('project/ActLoadProjectInfo');
-
-      this.projectReloading = false;
+      this.projectReloading = false
 
       if (!this.edit && !this.allSchemas) {
         this.$router.push({
@@ -1472,118 +1685,119 @@ export default {
           query: {
             new: 1
           }
-        });
+        })
       }
 
-      this.projectCreated = true;
+      this.projectCreated = true
 
-      this.projectReloading = false;
+      this.projectReloading = false
     },
 
     mtdDialogGetEnvNameSubmit(envName, cookie) {
-      console.log(envName);
+      console.log(envName)
       this.dialogGetEnvName.dialogShow = false
       if (envName in this.project.envs) {
-        console.log('Environment exists');
+        console.log('Environment exists')
       } else {
-        Vue.set(this.project.envs, envName,
-          {
-            db: [
-              {
-                "client": "pg",
-                "connection": {
-                  "host": "localhost",
-                  "port": "5432",
-                  "user": "postgres",
-                  "password": "password",
-                  "database": "new_database"
+        Vue.set(this.project.envs, envName, {
+          db: [
+            {
+              client: 'pg',
+              connection: {
+                host: 'localhost',
+                port: '5432',
+                user: 'postgres',
+                password: 'password',
+                database: 'new_database'
+              },
+              meta: {
+                tn: 'nc_evolutions',
+                dbAlias: 'db',
+                inflection: {
+                  tn: ['camelize'],
+                  cn: ['camelize']
                 },
-                "meta": {
-                  "tn": "nc_evolutions",
-                  "dbAlias": "db",
-                  inflection: {
-                    tn: ['camelize'],
-                    cn: ['camelize'],
-                  },
-                  api: {
-                    type: ''
-                  }
-                },
-                ui: {
-                  setup: 0,
-                  ssl: {
-                    key: "Client Key",
-                    cert: "Client Cert",
-                    ca: "Server CA"
-                  },
-                  sslUse: 'Preferred'
+                api: {
+                  type: ''
                 }
               },
-            ],
-            apiClient: {data: []}
-          });
+              ui: {
+                setup: 0,
+                ssl: {
+                  key: this.$t('projects.ext_db.credentials.advanced.ssl.client_key'), // Client Key
+                  cert: this.$t('projects.ext_db.credentials.advanced.ssl.client_cert'), // Client Cert
+                  ca: this.$t('projects.ext_db.credentials.advanced.ssl.server_ca') // Server CA
+                },
+                sslUse: this.$t('projects.ext_db.credentials.advanced.ssl.preferred') // Preferred
+              }
+            }
+          ],
+          apiClient: { data: [] }
+        })
       }
-
     },
     mtdDialogGetEnvNameCancel() {
-      console.log("mtdDialogGetTableNameCancel cancelled");
-      this.dialogGetEnvName.dialogShow = false;
+      console.log('mtdDialogGetTableNameCancel cancelled')
+      this.dialogGetEnvName.dialogShow = false
     },
 
     addNewEnvironment() {
-      this.dialogGetEnvName.dialogShow = true;
+      this.dialogGetEnvName.dialogShow = true
     },
     addNewDB(envKey, panelIndex) {
-      let len = this.project.envs[envKey].db.length;
-      let lastDbName = `${this.project.title}_${envKey}_${len}`;
-      const dbType = this.client[len] = this.client[len] || this.client[len - 1];
-      const newlyCreatedIndex = this.project.envs[envKey].db.length;
-      const dbAlias = this.project.envs[envKey].db.length <= 0 ? 'db' : `db${this.project.envs[envKey].db.length + 1}`;
+      const len = this.project.envs[envKey].db.length
+      // eslint-disable-next-line no-unused-vars
+      const lastDbName = `${this.project.title}_${envKey}_${len}`
+      const dbType = (this.client[len] = this.client[len] || this.client[len - 1])
+      const newlyCreatedIndex = this.project.envs[envKey].db.length
+      const dbAlias =
+        this.project.envs[envKey].db.length <= 0
+          ? 'db'
+          : `db${this.project.envs[envKey].db.length + 1}`
       this.project.envs[envKey].db.push({
-        "client": this.databaseNames[dbType],
-        "connection": {
+        client: this.databaseNames[dbType],
+        connection: {
           ...this.sampleConnectionData[dbType],
-          database: `${this.project.title}_${envKey}_${newlyCreatedIndex + 1}`,
+          database: `${this.project.title}_${envKey}_${newlyCreatedIndex + 1}`
         },
-        "meta": {
-          "tn": "nc_evolutions",
-          "dbAlias": dbAlias,
+        meta: {
+          tn: 'nc_evolutions',
+          dbAlias,
           inflection: {
             tn: ['camelize'],
-            cn: ['camelize'],
+            cn: ['camelize']
           },
           api: {
-            type: "",
+            type: ''
           }
         },
         ui: {
           setup: 0,
-          sslUse: 'Preferred',
+          sslUse: this.$t('projects.ext_db.credentials.advanced.ssl.preferred'), // Preferred
           ssl: {
-            key: "Client Key",
-            cert: "Client Cert",
-            ca: "Server CA"
-          },
+            key: this.$t('projects.ext_db.credentials.advanced.ssl.client_key'), // Client Key
+            cert: this.$t('projects.ext_db.credentials.advanced.ssl.client_cert'), // Client Cert
+            ca: this.$t('projects.ext_db.credentials.advanced.ssl.server_ca') // Server CA
+          }
         }
       })
       // set active tab as newly created
-      this.databases[panelIndex] = newlyCreatedIndex;
+      this.databases[panelIndex] = newlyCreatedIndex
     },
 
-
     testConnectionMethodSubmit() {
-      this.dialog.show = false;
+      this.dialog.show = false
     },
     selectDir(ev) {
       // console.log(ev)
-      const file = dialog.showOpenDialog({
-        properties: ["openDirectory"]
-      });
-      if (file && file[0]) {
-        this.baseFolder = file[0];
-        this.project.folder = file[0];
-        this.userSelectedDir = true;
-      }
+      // const file = dialog.showOpenDialog({
+      //   properties: ['openDirectory']
+      // })
+      // if (file && file[0]) {
+      //   this.baseFolder = file[0]
+      //   this.project.folder = file[0]
+      //   this.userSelectedDir = true
+      // }
     },
     selectSqliteFile(db) {
       // console.log(ev)
@@ -1598,140 +1812,145 @@ export default {
     getDbStatusColor(db) {
       switch (db.ui.setup) {
         case -1:
-          return "red"
-          break;
+          return 'red'
+
         case 0:
-          return "orange"
-          break;
+          return 'orange'
+
         case 1:
-          return "green"
-          break;
+          return 'green'
+
         default:
-          break;
+          break
       }
     },
 
     getDbStatusTooltip(db) {
       switch (db.ui.setup) {
         case -1:
-          return "DB Connection NOT successful"
-          break;
+          return 'DB Connection NOT successful'
+
         case 0:
-          return "MySql Database Detected - Test your connection"
-          break;
+          return 'MySql Database Detected - Test your connection'
+
         case 1:
-          return "DB Connection successful"
-          break;
+          return 'DB Connection successful'
+
         default:
-          break;
+          break
       }
     },
     async newTestConnection(db, env, panelIndex) {
-      console.log(this.project.envs[env][0]);
-      if (db.connection.host === 'localhost'
-        && !this.edit
-        && env === 'dev'
-        && this.project.envs[env].db.length === 1
-        && this.project.envs[env].db[0].connection.user === 'postgres'
-        && this.project.envs[env].db[0].connection.database === `${this.project.title}_${env}_${this.project.envs[env].length}`) {
-
-        this.handleSSL(db);
+      console.log(this.project.envs[env][0])
+      if (
+        db.connection.host === 'localhost' &&
+        !this.edit &&
+        env === 'dev' &&
+        this.project.envs[env].db.length === 1 &&
+        this.project.envs[env].db[0].connection.user === 'postgres' &&
+        this.project.envs[env].db[0].connection.database ===
+          `${this.project.title}_${env}_${this.project.envs[env].length}`
+      ) {
+        this.handleSSL(db)
         if (db.client === 'sqlite3') {
-          db.ui.setup = 1;
+          db.ui.setup = 1
         } else {
           const c1 = {
-            connection: {...db.connection, ...(db.client !== 'pg' ? {database: this.testDatabaseNames[db.client]} : {})},
+            connection: {
+              ...db.connection,
+              ...(db.client !== 'pg' ? { database: this.testDatabaseNames[db.client] } : {})
+            },
             client: db.client
-          };
+          }
 
-          const result = await this.$store.dispatch('sqlMgr/ActSqlOp', [{
-            query: {
-              skipProjectHasDb: 1
-            }
-          }, 'testConnection', c1]);
-          console.log("test connection result", result);
+          const result = await this.$store.dispatch('sqlMgr/ActSqlOp', [
+            {
+              query: {
+                skipProjectHasDb: 1
+              }
+            },
+            'testConnection',
+            c1
+          ])
+          console.log('test connection result', result)
 
           if (result.code === 0) {
-
-            db.ui.setup = 1;
-            let passed = true;
+            db.ui.setup = 1
+            let passed = true
             /**
              * get other environments
              * and if host is localhost - test and update connection status
              * UI panel close
              */
 
-            for (let e in this.project.envs) {
+            for (const e in this.project.envs) {
               if (e === env) {
-
+              //  ignore
               } else {
-
-                console.log(this.project.envs[e]);
+                console.log(this.project.envs[e])
 
                 const c2 = {
-                  connection: {...this.project.envs[e].db[0].connection, database: undefined},
+                  connection: { ...this.project.envs[e].db[0].connection, database: undefined },
                   client: this.project.envs[e].db[0].client
-                };
+                }
 
-                this.handleSSL(c2);
+                this.handleSSL(c2)
 
-                const result = await this.sqlMgr.testConnection(c2);
+                const result = await this.sqlMgr.testConnection(c2)
 
                 if (result.code === 0) {
-                  this.project.envs[e][0].ui.setup = 1;
+                  this.project.envs[e][0].ui.setup = 1
                 } else {
-                  this.project.envs[e][0].ui.setup = -1;
-                  passed = false;
-                  break;
+                  this.project.envs[e][0].ui.setup = -1
+                  passed = false
+                  break
                 }
               }
             }
 
             if (passed) {
-              this.panel = null;
+              this.panel = null
             } else {
-              this.dialog.heading = "Connection was successful"
-              this.dialog.type = 'success';
-              this.dialog.show = true;
+              // Connection was successful
+              this.dialog.heading = this.$t('projects.ext_db.dialog.success')
+              this.dialog.type = 'success'
+              this.dialog.show = true
             }
-
-
           } else {
-            db.ui.setup = -1;
-            this.dialog.heading = "Connection Failure: \n\n" + result.message;
-            this.dialog.type = 'error';
-            this.dialog.show = true;
+            db.ui.setup = -1
+            // Connection Failure:
+            this.dialog.heading = this.$t('projects.ext_db.dialog.failure') + result.message
+            this.dialog.type = 'error'
+            this.dialog.show = true
           }
         }
 
-        return true;
-
+        return true
       } else {
-        return false;
+        return false
       }
     },
 
     sendAdvancedConfig(connection) {
-      if (!connection.ssl) return false;
-      let sendAdvancedConfig = false;
-      const sslOptions = Object.values(connection.ssl).filter(el => !!el);
-      console.log('sslOptions:', sslOptions);
+      if (!connection.ssl) { return false }
+      let sendAdvancedConfig = false
+      const sslOptions = Object.values(connection.ssl).filter(el => !!el)
+      console.log('sslOptions:', sslOptions)
       if (sslOptions[0]) {
-        sendAdvancedConfig = true;
+        sendAdvancedConfig = true
       } else {
-        console.log('no ssl options');
+        console.log('no ssl options')
       }
-      return sendAdvancedConfig;
+      return sendAdvancedConfig
     },
 
     handleSSL(db, creating = true) {
-      console.log('handleSSL', db);
-      const sendAdvancedConfig = this.sendAdvancedConfig(db.connection);
+      console.log('handleSSL', db)
+      const sendAdvancedConfig = this.sendAdvancedConfig(db.connection)
       if (!sendAdvancedConfig) {
-        //args.ssl = undefined;
-        db.connection.ssl = undefined;
+        // args.ssl = undefined;
+        db.connection.ssl = undefined
       }
-
 
       if (db.connection.ssl) {
         // db.connection.ssl.caFilePath = db.connection.ssl.ca;
@@ -1744,159 +1963,214 @@ export default {
         // }
       }
     },
-    getDatabaseForTestConnection(dbType) {
-
-    },
+    getDatabaseForTestConnection(dbType) {},
     async testConnection(db, env, panelIndex) {
-
       this.$store.commit('notification/MutToggleProgressBar', true)
       try {
-        if (!await this.newTestConnection(db, env, panelIndex)) {
+        if (!(await this.newTestConnection(db, env, panelIndex))) {
           // this.activeDbNode.testConnectionStatus = false;
           //
 
-          this.handleSSL(db);
+          this.handleSSL(db)
 
-          console.log('testconnection params', db);
+          console.log('testconnection params', db)
           if (db.client === 'sqlite3') {
-            db.ui.setup = 1;
+            db.ui.setup = 1
           } else {
             const c1 = {
               connection: {
-                ...db.connection, ...(db.client !== 'pg' ? {database: this.testDatabaseNames[db.client]} : {})
+                ...db.connection,
+                ...(db.client !== 'pg' ? { database: this.testDatabaseNames[db.client] } : {})
               },
               client: db.client
-            };
+            }
 
             // const result = await this.sqlMgr.testConnection(c1);
-            const result = await this.$store.dispatch('sqlMgr/ActSqlOp', [{
-              query: {
-                skipProjectHasDb: 1
-              }
-            }, 'testConnection', c1]);
+            const result = await this.$store.dispatch('sqlMgr/ActSqlOp', [
+              {
+                query: {
+                  skipProjectHasDb: 1
+                }
+              },
+              'testConnection',
+              c1
+            ])
 
-            console.log("test connection result", result);
-            if (result.code === 0
-            ) {
-              db.ui.setup = 1;
+            console.log('test connection result', result)
+            if (result.code === 0) {
+              db.ui.setup = 1
               // this.dialog.heading = "Connection was successful"
               // this.dialog.type = 'success';
               // this.dialog.show = true;
-              this.testSuccess = true;
+              this.testSuccess = true
             } else {
-              db.ui.setup = -1;
+              db.ui.setup = -1
               // this.activeDbNode.testConnectionStatus = false;
-              this.dialog.heading = "Connection Failure: \n\n" + result.message;
-              this.dialog.type = 'error';
-              this.dialog.show = true;
+              this.dialog.heading = this.$t('projects.ext_db.dialog.failure') + result.message
+              this.dialog.type = 'error'
+              this.dialog.show = true
             }
 
-            console.log('testconnection params : after', db);
+            console.log('testconnection params : after', db)
           }
         }
-      } catch
-        (e) {
-        console.log(e);
+      } catch (e) {
+        console.log(e)
       } finally {
         this.$store.commit('notification/MutToggleProgressBar', false)
       }
-
-
-    }
-    ,
+    },
     getEnvironmentStatusAggregated(dbs) {
       return dbs.every(db => db.ui.setup === 1)
     },
 
     getEnvironmentStatusAggregatedNew(dbs) {
       return dbs.db.every(db => db.ui.setup === 1)
-    }
-    ,
+    },
     openFirstPanel() {
-      if (!this.edit) this.panel = 0;
+      if (!this.edit) { this.panel = 0 }
     },
     onDatabaseTypeChanged(client, db1, index, env) {
-
-
-      for (let env in this.project.envs) {
+      for (const env in this.project.envs) {
         if (this.project.envs[env].db.length > index) {
-          const db = this.project.envs[env].db[index];
+          const db = this.project.envs[env].db[index]
           Vue.set(db, 'client', this.databaseNames[client])
           if (client !== 'Sqlite') {
-            const {ssl, ...connectionDet} = this.sampleConnectionData[client];
-
+            const { ssl, ...connectionDet } = this.sampleConnectionData[client]
 
             Vue.set(db, 'connection', {
               ...connectionDet,
               database: `${this.project.title}_${env}_${index + 1}`,
-              ssl: {...ssl}
+              ssl: { ...ssl }
             })
 
-            for (let env in this.project.envs) {
+            for (const env in this.project.envs) {
               if (this.project.envs[env].length > index) {
-                this.setDBStatus(this.project.envs[env][index], 0);
+                this.setDBStatus(this.project.envs[env][index], 0)
               }
             }
           } else {
-            db.connection = {};
+            db.connection = {}
             Vue.set(db, 'connection', {
               client: 'sqlite3',
               // connection: {filename: path.join(this.project.folder, `${this.project.title}_${env}_${index + 1}`)},
-              connection: {filename: [this.project.folder, `${this.project.title}_${env}_${index + 1}`].join('/')},
-              database: [this.project.folder, `${this.project.title}_${env}_${index + 1}`].join('/'),
+              connection: {
+                filename: [this.project.folder, `${this.project.title}_${env}_${index + 1}`].join(
+                  '/'
+                )
+              },
+              database: [this.project.folder, `${this.project.title}_${env}_${index + 1}`].join(
+                '/'
+              ),
               // database: path.join(this.project.folder, `${this.project.title}_${env}_${index + 1}`),
               useNullAsDefault: true
             })
             // Vue.set(db.connection, 'connection', {filename: `${this.project.folder}/${this.project.title}_${env}_${index + 1}`})
             // Vue.set(db.connection, 'database', `${this.project.folder}/${this.project.title}_${env}_${index + 1}`)
           }
-
         }
       }
-    }, selectDatabaseClient(database, index = 0) {
-      if (this.client) this.client[index] = database;
+    },
+    selectDatabaseClient(database, index = 0) {
+      if (this.client) { this.client[index] = database }
     },
     setDBStatus(db, status) {
-      db.ui.setup = status;
+      db.ui.setup = status
     },
     removeDBFromEnv(db, env, panelIndex, dbIndex) {
+      console.log(db, env, panelIndex, dbIndex)
 
-      console.log(db, env, panelIndex, dbIndex);
-
-      for (let env in this.project.envs) {
+      for (const env in this.project.envs) {
         if (this.project.envs[env].db.length > dbIndex) {
-          this.project.envs[env].db.splice(dbIndex, 1);
+          this.project.envs[env].db.splice(dbIndex, 1)
         }
       }
-
     },
     removeEnv(envKey) {
-      delete this.project.envs[envKey];
-      Vue.set(this.project, 'envs', {...this.project.envs})
+      delete this.project.envs[envKey]
+      Vue.set(this.project, 'envs', { ...this.project.envs })
     }
   },
-  fetch({store, params}) {
-  },
-  beforeCreated() {
+  fetch({ store, params }) {},
+  beforeCreated() {},
+  watch: {
+    'project.title'(newValue, oldValue) {
+      if (!newValue) { return }
+      if (!this.edit) {
+        // Vue.set(this.project, 'folder', slash(path.join(this.baseFolder, newValue)))
+        Vue.set(this.project, 'folder', [this.baseFolder, newValue].join('/'))
+        // }//this.project.folder = `${this.baseFolder}/${newValue}`;
+
+        for (const env in this.project.envs) {
+          for (const [index, db] of this.project.envs[env].db.entries()) {
+            // db.connection.database = `${this.project.title}_${env}_${index}`
+            if (db.client !== 'sqlite3') {
+              Vue.set(db.connection, 'database', `${this.project.title}_${env}_${index + 1}`)
+            } else {
+              // Vue.set(db.connection, 'connection', {
+              //   filename: path.join(
+              //     this.project.folder,
+              //     `${this.project.title}_${env}_${index + 1}`
+              //   )
+              // })
+              Vue.set(db.connection, 'database', `${this.project.title}_${env}_${index + 1}`)
+            }
+          }
+        }
+      }
+    },
+    'project.envs': {
+      deep: true,
+      handler(envs) {
+        if (typeof envs === 'object' && envs) {
+          Object.entries(envs).forEach(([key, env]) => {
+            let res = 1
+            const msg = {}
+            for (const db of env.db) {
+              res = db.ui.setup < res ? db.ui.setup : res
+            }
+            if (this.edit) {
+              Vue.set(this.project.ui, key, '')
+            } else {
+              switch (res) {
+                case -1:
+                  msg.color = 'red'
+                  msg.msg = ' ( Invalid database parameters )'
+                  break
+                case 0:
+                  msg.color = 'warning'
+                  msg.msg = ' ( Click to validate database credentials )'
+                  break
+                case 1:
+                  msg.color = 'green'
+                  msg.msg = ' ( Environment Validated )'
+                  break
+              }
+              Vue.set(this.project.ui, key, msg)
+            }
+          })
+        }
+      }
+    }
   },
   async created() {
-
-    this.compErrorMessage = this.compErrorMessages[Math.floor(Math.random() * this.compErrorMessages.length)];
+    this.compErrorMessage =
+      this.compErrorMessages[Math.floor(Math.random() * this.compErrorMessages.length)]
 
     if (this.edit) {
       // this.edit = true;
       // await this.$store.dispatch('sqlMgr/instantiateSqlMgr');
       try {
-        let data = await this.$store.dispatch('sqlMgr/ActSqlOp', [null, 'xcProjectGetConfig']);
-        data = JSON.parse(data.config);
-        console.log('created:', data);
-        this.constructProjectJsonFromProject(data);
-        this.$set(this.project, 'folder', data.folder);
+        let data = await this.$store.dispatch('sqlMgr/ActSqlOp', [null, 'xcProjectGetConfig'])
+        data = JSON.parse(data.config)
+        console.log('created:', data)
+        this.constructProjectJsonFromProject(data)
+        this.$set(this.project, 'folder', data.folder)
       } catch (e) {
         this.$toast.error(e.message).goAway(3000)
       }
     } else {
-      this.project = JSON.parse(JSON.stringify(this.defaultProject));
+      this.project = JSON.parse(JSON.stringify(this.defaultProject))
       // this.edit = false;
 
       /**
@@ -1906,31 +2180,30 @@ export default {
        *
        *
        */
-      let dbsAvailable = [];//await PortScanner.getOpenDbPortsAsList();
+      let dbsAvailable = [] // await PortScanner.getOpenDbPortsAsList();
       // // setting MySQL as default value if no databases are available
       // if (!dbsAvailable || !dbsAvailable.length) {
-      dbsAvailable = ['MySQL'];
+      dbsAvailable = ['MySQL']
       // }
 
-      this.selectDatabaseClient(dbsAvailable[0], 0);
+      this.selectDatabaseClient(dbsAvailable[0], 0)
 
       // iterating over environment and setting default connection details based
       // on first available database
-      for (let env in this.project.envs) {
-        for (let db of this.project.envs[env].db) {
-
-          db.client = this.databaseNames[dbsAvailable[0]];
+      for (const env in this.project.envs) {
+        for (const db of this.project.envs[env].db) {
+          db.client = this.databaseNames[dbsAvailable[0]]
 
           if (db.client === 'sqlite3') {
             db.connection = {
               ...this.sampleConnectionData[dbsAvailable[0]]
             }
 
-            db.ui.setup = 0;
+            db.ui.setup = 0
           } else {
             db.connection = {
               ...this.sampleConnectionData[dbsAvailable[0]],
-              ssl: {...this.sampleConnectionData[dbsAvailable[0]].ssl}
+              ssl: { ...this.sampleConnectionData[dbsAvailable[0]].ssl }
             }
             // db.ui.setup = await PortScanner.isAlive(db.connection.host, parseInt(db.connection.port)) ? 0 : -1;
           }
@@ -1943,95 +2216,40 @@ export default {
       //     console.log('testing port', env, db.connection.database, db.ui.setup);
       //   }
       // }
-
     }
-
-
   },
-  beforeMount() {
-  },
+  beforeMount() {},
   mounted() {
-    this.$set(this.project, 'title', uniqueNamesGenerator({
-      dictionaries: [[starWars], [adjectives, animals]][Math.floor(Math.random() * 2)]
-    }).toLowerCase().replace(/[ -]/g, '_'));
+    this.$set(
+      this.project,
+      'title',
+      uniqueNamesGenerator({
+        dictionaries: [[starWars], [adjectives, animals]][Math.floor(Math.random() * 2)]
+      })
+        .toLowerCase()
+        .replace(/[ -]/g, '_')
+    )
 
     this.$nextTick(() => {
-      const input = this.$refs.name.$el.querySelector('input');
+      const input = this.$refs.name.$el.querySelector('input')
       input.setSelectionRange(0, this.project.title.length)
-      input.focus();
+      input.focus()
     })
   },
-  beforeDestroy() {
-  },
-  destroy() {
-  },
-  validate({params}) {
+  beforeDestroy() {},
+  destroy() {},
+  validate({ params }) {
     return true
   },
   head() {
     return {
-      title: 'Create Project | XC',
+      title: this.$t('projects.ext_db.head.title')
     }
   },
   props: {
     edit: {
       type: Boolean,
       default: false
-    }
-  },
-  watch: {
-    'project.title': function (newValue, oldValue) {
-      if (!newValue) return;
-      if (!this.edit) {
-        // Vue.set(this.project, 'folder', slash(path.join(this.baseFolder, newValue)))
-        Vue.set(this.project, 'folder', [this.baseFolder, newValue].join('/'))
-        // }//this.project.folder = `${this.baseFolder}/${newValue}`;
-
-        for (let env in this.project.envs) {
-          for (let [index, db] of this.project.envs[env].db.entries()) {
-            //db.connection.database = `${this.project.title}_${env}_${index}`
-            if (db.client !== 'sqlite3') {
-              Vue.set(db.connection, 'database', `${this.project.title}_${env}_${index + 1}`)
-            } else {
-              Vue.set(db.connection, 'connection', {filename: path.join(this.project.folder, `${this.project.title}_${env}_${index + 1}`)})
-              Vue.set(db.connection, 'database', `${this.project.title}_${env}_${index + 1}`)
-            }
-          }
-        }
-      }
-    },
-    'project.envs': {
-      deep: true,
-      handler(envs) {
-        if (typeof envs === 'object' && envs)
-          Object.entries(envs).forEach(([key, env]) => {
-            let res = 1, msg = {};
-            for (let db of env.db) {
-              res = db.ui.setup < res ? db.ui.setup : res;
-            }
-            if (this.edit) {
-              Vue.set(this.project.ui, key, '');
-            } else {
-
-              switch (res) {
-                case -1:
-                  msg.color = 'red';
-                  msg.msg = ' ( Invalid database parameters )';
-                  break;
-                case 0:
-                  msg.color = 'warning';
-                  msg.msg = ' ( Click to validate database credentials )'
-                  break;
-                case 1:
-                  msg.color = 'green';
-                  msg.msg = ' ( Environment Validated )'
-                  break;
-              }
-              Vue.set(this.project.ui, key, msg);
-
-            }
-          })
-      }
     }
   },
   directives: {}
@@ -2042,7 +2260,7 @@ export default {
 .floating-button {
   position: fixed;
   right: 7%;
-  bottom: 100px
+  bottom: 100px;
 }
 
 /deep/ .v-expansion-panel-header {
@@ -2065,7 +2283,6 @@ export default {
   z-index: 999;
   cursor: pointer !important;
 }
-
 </style>
 <!--
 /**
@@ -2073,6 +2290,7 @@ export default {
  *
  * @author Naveen MR <oof1lab@gmail.com>
  * @author Pranav C Balan <pranavxc@gmail.com>
+ * @author Wing-Kam Wong <wingkwong.code@gmail.com>
  *
  * @license GNU AGPL version 3 or any later version
  *

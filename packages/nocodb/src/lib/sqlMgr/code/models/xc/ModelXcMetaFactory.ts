@@ -1,11 +1,12 @@
-import ModelXcMetaMysql from "./ModelXcMetaMysql";
-import ModelXcMetaSqlite from "./ModelXcMetaSqlite";
-import ModelXcMetaPg from "./ModelXcMetaPg";
+import BaseModelXcMeta from "./BaseModelXcMeta";
 import ModelXcMetaMssql from "./ModelXcMetaMssql";
+import ModelXcMetaMysql from "./ModelXcMetaMysql";
 import ModelXcMetaOracle from "./ModelXcMetaOracle";
+import ModelXcMetaPg from "./ModelXcMetaPg";
+import ModelXcMetaSqlite from "./ModelXcMetaSqlite";
 
 class ModelXcMetaFactory {
-  public static create(connectionConfig, args) {
+  public static create(connectionConfig, args):BaseModelXcMeta {
     if (connectionConfig.client === "mysql2" || connectionConfig.client === "mysql") {
       return new ModelXcMetaMysql(args)
     } else if (connectionConfig.client === "sqlite3") {

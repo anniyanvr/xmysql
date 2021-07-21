@@ -1,89 +1,14 @@
-/* tslint:disable */
 import {expect} from 'chai';
 import 'mocha';
-import {Noco} from "../lib";
-
-import request from 'supertest';
 import express from 'express';
+import request from 'supertest';
+
+import {Noco} from "../lib";
 import NcConfigFactory from "../lib/utils/NcConfigFactory";
-// import knex from 'knex';
-// import {XcConfig} from "../interface/config";
-// import JWT from "../lib/xgene/grpc/helpers/jwt";
 process.env.TEST = 'test';
-// process.env[`DATABASE_URL`] = 'mysql://root:password@localhost:3306/sakila';
 
 let projectId;
 let token;
-/*
-const config: XcConfig = {
-  // mailer: {
-  //   "from": "From",
-  //   "options": {
-  //     "host": "host",
-  //     "port": 465,
-  //     "secure": true,
-  //     "auth": {
-  //       "user": "user",
-  //       "pass": "pass"
-  //     }
-  //   }
-  // },
-  auth: {
-    jwt: {
-      secret: "shgdhsgdhgsgdgswyeyey28378732qgwhqg233232hjhasha",
-      dbAlias: 'db'
-    }
-  },
-  envs: {
-    dev: {
-      db: [
-        {
-          "client": "mysql",
-          "connection": {
-            "host": "localhost",
-            "port": 3306,
-            "user": "root",
-            "password": "password",
-            database: "sakila"
-          },
-          meta: {
-            "dbAlias": "db",
-            api: {
-              type: "rest",
-              prefix: ""
-            },
-            metaTables: "db"
-          }
-        },
-      ],
-    },
-    test: {
-      db: [
-        {
-          "client": "mysql",
-          "connection": {
-            "host": "localhost",
-            "port": 3306,
-            "user": "root",
-            "password": "",
-            database: "sakila"
-          },
-          meta: {
-            "dbAlias": "db",
-            api: {
-              type: "rest",
-              prefix: ""
-            },
-            metaTables: "db"
-          }
-        },
-      ],
-    },
-  },
-  toolDir: process.cwd()
-};
-*/
-
 const dbConfig = NcConfigFactory.urlToDbConfig(NcConfigFactory.extractXcUrlFromJdbc(process.env[`DATABASE_URL`]));
 const projectCreateReqBody = {
   "api": "projectCreateByWeb",
@@ -786,9 +711,9 @@ describe('{Auth, CRUD, HasMany, Belongs} Tests', () => {
             expect(res.body).to.be.a('array');
             expect(res.body[0]).to.be.a('object');
             expect(res.body[0].country).to.be.a('string');
-            expect(res.body[0].city).to.be.a('array');
-            expect(res.body[0].city[0]).to.be.a('object');
-            expect(res.body[0].city[0].city).to.be.a('string');
+            expect(res.body[0].cityList).to.be.a('array');
+            expect(res.body[0].cityList[0]).to.be.a('object');
+            expect(res.body[0].cityList[0].city).to.be.a('string');
             done();
           })
         })
@@ -914,7 +839,7 @@ describe('{Auth, CRUD, HasMany, Belongs} Tests', () => {
       /**************** START : belongsTo ****************/
       describe('City BelngsTo Country Api', function () {
 
-        it('has city - GET - /api/v1/country/has/city(:childs)?', function (done) {
+        it('city belongs to country - GET - /api/v1/city/belongs/country', function (done) {
           // get last inserted 5 entry by sorting db data in reverse order based on id
           request(app)
             .get(`/nc/${projectId}/api/v1/city/belongs/country?limit=10`)
@@ -924,7 +849,7 @@ describe('{Auth, CRUD, HasMany, Belongs} Tests', () => {
               expect(res.body).to.be.a('array');
               expect(res.body[0]).to.be.a('object');
               expect(res.body[0].city).to.be.a('string');
-              expect(res.body[0].country).to.be.a('object');
+              expect(res.body[0].countryRead).to.be.a('object');
               expect(res.body.length).to.be.most(10)
               done();
             })

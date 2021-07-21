@@ -1,6 +1,7 @@
-import Validator from 'validator';
-import _ from 'lodash';
 import autoBind from 'auto-bind';
+import _ from 'lodash';
+import Validator from 'validator';
+
 import BaseModel, {XcFilter, XcFilterWithAlias} from '../BaseModel';
 
 
@@ -39,6 +40,7 @@ class BaseModelSql extends BaseModel {
       columns,
       hasMany = [],
       belongsTo = [],
+      manyToMany = [],
       type,
       dbModels
     }: {
@@ -63,6 +65,7 @@ class BaseModelSql extends BaseModel {
     this.pks = columns.filter(c => c.pk === true);
     this.hasManyRelations = hasMany;
     this.belongsToRelations = belongsTo;
+    this.manyToManyRelations = manyToMany;
     this.config = {
       limitDefault: process.env.DB_QUERY_LIMIT_DEFAULT || 10,
       limitMax: process.env.DB_QUERY_LIMIT_MAX || 500,
@@ -96,7 +99,7 @@ class BaseModelSql extends BaseModel {
   async validate(columns) {
     // let cols = Object.keys(this.columns);
     for (let i = 0; i < this.columns.length; ++i) {
-      let {validate: {func, msg}, cn} = this.columns[i];
+      const {validate: {func, msg}, cn} = this.columns[i];
       for (let j = 0; j < func.length; ++j) {
         const fn = typeof func[j] === 'string' ? Validator[func[j]] : func[j];
         const arg = typeof func[j] === 'string' ? columns[cn] + "" : columns[cn];
@@ -125,8 +128,8 @@ class BaseModelSql extends BaseModel {
    * @private
    */
   _wherePk(id) {
-    let ids = (id + '').split('___');
-    let where = {};
+    const ids = (id + '').split('___');
+    const where = {};
     for (let i = 0; i < this.pks.length; ++i) {
       where[this.pks[i].cn] = ids[i];
     }
@@ -252,8 +255,8 @@ class BaseModelSql extends BaseModel {
 
       const query = driver(this.tn).insert(insertObj);
 
-      if (this.dbDriver.clientType() === 'pg' || this.dbDriver.clientType() === 'mssql') {
-        query.returning(Object.entries(this.aliasToColumn).map(([val,key]) => `${key} as ${val}`));
+      if (this.isPg() || this.dbDriver.clientType() === 'mssql') {
+        query.returning(Object.entries(this.aliasToColumn).map(([val, key]) => `${key} as ${val}`));
         response = await this._run(query);
       }
 
@@ -272,6 +275,11 @@ class BaseModelSql extends BaseModel {
           response = data;
         }
       }
+
+      if (Array.isArray(response)) {
+        response = response[0];
+      }
+
       await this.afterInsert(response, trx, cookie);
       return Array.isArray(response) ? response[0] : response;
     } catch (e) {
@@ -281,6 +289,10 @@ class BaseModelSql extends BaseModel {
     }
   }
 
+
+  private isPg() {
+    return this.dbDriver.clientType() === 'pg';
+  }
 
   /**
    * Update table row data by primary key
@@ -298,11 +310,10 @@ class BaseModelSql extends BaseModel {
 
       await this.beforeUpdate(data, trx, cookie);
 
-      let response;
       const driver = trx ? trx : this.dbDriver
 
       // this.validate(data);
-      response = await this._run(driver(this.tn).update(mappedData).where(this._wherePk(id)));
+      const response = await this._run(driver(this.tn).update(mappedData).where(this._wherePk(id)));
       await this.afterUpdate(data, trx, cookie);
       return response;
     } catch (e) {
@@ -324,10 +335,9 @@ class BaseModelSql extends BaseModel {
     try {
       await this.beforeDelete({id}, trx, cookie);
 
-      let response;
-      let dbDriver = trx ? trx : this.dbDriver;
+      const dbDriver = trx ? trx : this.dbDriver;
 
-      response = await this._run(dbDriver(this.tn).del().where(this._wherePk(id)));
+      const response = await this._run(dbDriver(this.tn).del().where(this._wherePk(id)));
       await this.afterDelete({id}, trx, cookie);
       return response;
     } catch (e) {
@@ -418,10 +428,9 @@ class BaseModelSql extends BaseModel {
       await this.validate(data);
       await this.beforeUpdate(data, trx, cookie);
 
-      let response;
       const dbDriver = trx ? trx : this.dbDriver;
       // this.validate(data);
-      response = await this._run(dbDriver(this.tn).update(data).where(this._wherePk(id)).andWhere(this._whereFk({
+      const response = await this._run(dbDriver(this.tn).update(data).where(this._wherePk(id)).andWhere(this._whereFk({
         tnp,
         parentId
       })));
@@ -450,10 +459,9 @@ class BaseModelSql extends BaseModel {
       // await this.beforeUpdate(data);
       await this.validate(data);
 
-      let response;
       const driver = trx ? trx : this.dbDriver
 
-      response = await this._run(driver(this.tn).update(data).xwhere(where, this.selectQuery('')).condition(condition, this.selectQuery('')));
+      const response = await this._run(driver(this.tn).update(data).xwhere(where, this.selectQuery('')).condition(condition, this.selectQuery('')));
 
       // await this.afterUpdate(data);
       return response;
@@ -480,9 +488,8 @@ class BaseModelSql extends BaseModel {
     try {
       await this.beforeDelete({id, parentId, tnp}, trx, cookie);
 
-      let response;
       const dbDriver = trx ? trx : this.dbDriver;
-      response = await this._run(dbDriver(this.tn).del().where(this._wherePk(id)).andWhere(this._whereFk({
+      const response = await this._run(dbDriver(this.tn).del().where(this._wherePk(id)).andWhere(this._whereFk({
         tnp,
         parentId
       })));
@@ -508,10 +515,9 @@ class BaseModelSql extends BaseModel {
     try {
       // await this.beforeUpdate(data);
 
-      let response;
       const driver = trx ? trx : this.dbDriver
 
-      response = await this._run(driver(this.tn).del().xwhere(where, this.selectQuery('')).condition(condition, this.selectQuery('')));
+      const response = await this._run(driver(this.tn).del().xwhere(where, this.selectQuery('')).condition(condition, this.selectQuery('')));
 
       // await this.afterUpdate(data);
       return response;
@@ -538,14 +544,11 @@ class BaseModelSql extends BaseModel {
 
       await this.beforeInsertb(insertDatas, null)
 
-      let response;
-
-
       for (const d1 of insertDatas) {
         await this.validate(d1);
       }
 
-      response = await this.dbDriver.batchInsert(this.tn, insertDatas, 50)
+      const response = await this.dbDriver.batchInsert(this.tn, insertDatas, 50)
         .returning(this.pks[0].cn);
 
       await this.afterInsertb(insertDatas, null);
@@ -576,12 +579,12 @@ class BaseModelSql extends BaseModel {
       transaction = await this.dbDriver.transaction();
 
       await this.beforeUpdateb(insertDatas, transaction);
-      let res = [];
+      const res = [];
       for (const d of insertDatas) {
 
         await this.validate(d);
         // this.validate(d);
-        let response = await this._run(transaction(this.tn).update(d).where(this._extractPks(d)));
+        const response = await this._run(transaction(this.tn).update(d).where(this._extractPks(d)));
         res.push(response);
       }
 
@@ -612,9 +615,9 @@ class BaseModelSql extends BaseModel {
       transaction = await this.dbDriver.transaction();
       await this.beforeDeleteb(ids, transaction);
 
-      let res = [];
-      for (let d of ids) {
-        let response = await this._run(transaction(this.tn).del().where(this._extractPks(d)));
+      const res = [];
+      for (const d of ids) {
+        const response = await this._run(transaction(this.tn).del().where(this._extractPks(d)));
         res.push(response);
       }
       await this.afterDeleteb(res, transaction);
@@ -696,7 +699,7 @@ class BaseModelSql extends BaseModel {
 
     try {
 
-      let {fields, where, limit, offset, sort, condition, conditionGraph = null} = this._getListArgs(args);
+      const {fields, where, limit, offset, sort, condition, conditionGraph = null} = this._getListArgs(args);
 
       // if (fields === '*') {
       //   fields = `${this.tn}.*`;
@@ -734,11 +737,12 @@ class BaseModelSql extends BaseModel {
    */
   async findOne(args: XcFilterWithAlias = {}) {
     try {
-      let {fields, where, condition, conditionGraph} = this._getListArgs(args);
+      const {where, condition, conditionGraph, ...rest} = this._getListArgs(args);
+      let {fields} = rest;
       if (fields === '*') {
         fields = `${this.tn}.*`;
       }
-      let query = this.$db
+      const query = this.$db
         // .select(fields)
         .select(this.selectQuery(fields))
         .xwhere(where, this.selectQuery('')).condition(condition, this.selectQuery(''))
@@ -768,11 +772,12 @@ class BaseModelSql extends BaseModel {
    */
   async findOneByFk({parentId, tnp, ...args}) {
     try {
-      let {fields, where, condition, conditionGraph} = this._getListArgs(args);
+      const {where, condition, conditionGraph, ...restArgs} = this._getListArgs(args);
+      let {fields} = restArgs;
       if (fields === '*') {
         fields = `${this.tn}.*`;
       }
-      let query = this.$db
+      const query = this.$db
         // .select(fields)
         .select(this.selectQuery(fields))
         .where(this._whereFk({parentId, tnp}))
@@ -800,6 +805,17 @@ class BaseModelSql extends BaseModel {
    */
   async countByPk({where = '', conditionGraph = null}) {
     try {
+      if (this.isPg() && !conditionGraph && !where) {
+        const res = (await this._run(
+          this.dbDriver.raw(`select reltuples::int8 as count 
+        from pg_class c JOIN pg_catalog.pg_namespace n ON n.oid=c.relnamespace
+        where nspname=? AND relname=?`, [this.config?.searchPath?.[0] || 'public', this.tn])
+        ))?.rows?.[0];
+        if (res?.count > 1000) {
+          return res;
+        }
+      }
+
       return await this._run(this.$db
         .conditionGraph(conditionGraph)
         .count(`${this.tn}.${(this.pks[0] || this.columns[0]).cn} as count`)
@@ -886,7 +902,7 @@ class BaseModelSql extends BaseModel {
   async groupBy({having, fields = '', column_name, limit, offset, sort}) {
     try {
       const columns = [...(column_name ? [column_name] : []), ...fields.split(',').filter(Boolean)];
-      let query = this.$db
+      const query = this.$db
         .groupBy(columns)
         .count(`${(this.pks[0] || this.columns[0]).cn} as count`)
         // .select(columns)
@@ -1085,15 +1101,17 @@ class BaseModelSql extends BaseModel {
    * @private
    */
   async _getChildListInParent({parent, child}, rest = {}, index) {
-    let {fields, where, limit, offset, sort} = this._getChildListArgs(rest, index);
+    const {where, limit, offset, sort, ...restArgs} = this._getChildListArgs(rest, index, child);
+    let {fields} = restArgs;
     const {cn} = this.hasManyRelations.find(({tn}) => tn === child) || {};
+    const _cn = this.dbModels[child].columnToAlias?.[cn];
 
     if (fields !== '*' && fields.split(',').indexOf(cn) === -1) {
       fields += ',' + cn;
     }
 
 
-    let childs = await this._run(this.dbDriver.union(
+    const childs = await this._run(this.dbDriver.union(
       parent.map(p => {
         const query =
           this
@@ -1102,16 +1120,69 @@ class BaseModelSql extends BaseModel {
             .xwhere(where, this.dbModels[child].selectQuery(''))
             .select(this.dbModels[child].selectQuery(fields)) // ...fields.split(','));
 
-
-        this._paginateAndSort(query, {sort, limit, offset}, null,true);
+        this._paginateAndSort(query, {sort, limit, offset}, null, true);
         return this.isSqlite() ? this.dbDriver.select().from(query) : query;
       }), !this.isSqlite()
     ));
 
-    let gs = _.groupBy(childs, cn);
+    const gs = _.groupBy(childs, _cn);
     parent.forEach(row => {
-      row[this.dbModels?.[child]?._tn || child] = gs[row[this.pks[0].cn]] || [];
+      row[`${this.dbModels?.[child]?._tn || child}List`] = gs[row[this.pks[0]._cn]] || [];
     })
+  }
+
+  /**
+   * Get child list and map to input parent
+   *
+   * @param {Object[]} parent - parent list array
+   * @param {String} child - child table name
+   * @param {Object} rest - index suffixed fields, limit, offset, where and sort
+   * @param index - child table index
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _getManyToManyList({parent, child}, rest = {}, index) {
+    const gs = await this._getGroupedManyToManyList({
+      rest,
+      index,
+      child,
+      parentIds: parent.map(p => p[this.columnToAlias?.[this.pks[0].cn] || this.pks[0].cn])
+    });
+    parent.forEach((row, i) => {
+      row[`${this.dbModels?.[child]?._tn || child}MMList`] = gs[i] || [];
+    })
+
+  }
+
+  public async _getGroupedManyToManyList({rest = {}, index = 0, child, parentIds}) {
+    const {where, limit, offset, sort, ...restArgs} = this._getChildListArgs(rest, index, child);
+    let {fields} = restArgs;
+    const {tn, cn, vtn, vcn, vrcn, rtn, rcn} = this.manyToManyRelations.find(({rtn}) => rtn === child) || {};
+    // @ts-ignore
+    // const _cn = this.dbModels[tn].columnToAlias?.[cn];
+
+    if (fields !== '*' && fields.split(',').indexOf(cn) === -1) {
+      fields += ',' + cn;
+    }
+
+
+    const childs = await this._run(this.dbDriver.union(
+      parentIds.map(id => {
+        const query =
+          this
+            .dbDriver(child)
+            .join(vtn, `${vtn}.${vrcn}`, `${rtn}.${rcn}`)
+            .where(`${vtn}.${vcn}`, id) // p[this.columnToAlias?.[this.pks[0].cn] || this.pks[0].cn])
+            .xwhere(where, this.dbModels[child].selectQuery(''))
+            .select({[`${tn}_${vcn}`]: `${vtn}.${vcn}`, ...this.dbModels[child].selectQuery(fields)}) // ...fields.split(','));
+
+        this._paginateAndSort(query, {sort, limit, offset}, null, true);
+        return this.isSqlite() ? this.dbDriver.select().from(query) : query;
+      }), !this.isSqlite()
+    ));
+
+    const gs = _.groupBy(childs, `${tn}_${vcn}`);
+    return parentIds.map(id => gs[id] || [])
   }
 
   /**
@@ -1129,14 +1200,15 @@ class BaseModelSql extends BaseModel {
    */
   async hasManyChildren({child, parentId, conditionGraph = null, ...args}: XcFilterWithAlias & { child: string, parentId: any }) {
     try {
-      let {fields, where, limit, offset, sort} = this._getListArgs(args);
+      const {where, limit, offset, sort, ...restArgs} = this._getListArgs(args);
+      let {fields} = restArgs;
       const {cn} = this.hasManyRelations.find(({tn}) => tn === child) || {};
 
       if (fields === '*') {
         fields = `${child}.*`
       }
 
-      let query = this.dbDriver(child)
+      const query = this.dbDriver(child)
         // .select(...fields.split(','))
         .select(this.dbModels?.[child]?.selectQuery(fields) || fields)
         .where(cn, parentId)
@@ -1170,7 +1242,7 @@ class BaseModelSql extends BaseModel {
    */
 
   // todo : add conditionGraph
-  async hasManyList({childs, where, fields, f, ...rest}) {
+  async hasManyList({childs = '', where, fields, f, ...rest}) {
     fields = fields || f || '*';
     try {
 
@@ -1180,7 +1252,7 @@ class BaseModelSql extends BaseModel {
 
       const parent = await this.list({childs, where, fields, ...rest});
       if (parent && parent.length) {
-        await Promise.all([...new Set(childs.split('.'))].map((child, index) => this._getChildListInParent({
+        await Promise.all([...new Set(childs.split('.'))].map((child, index) => child && this._getChildListInParent({
           parent,
           child
         }, rest, index)));
@@ -1191,6 +1263,132 @@ class BaseModelSql extends BaseModel {
       throw e;
     }
   }
+
+  /**
+   * Gets parent list along with children list and parent
+   *
+   * @param {Object} args
+   * @param {String} args.childs - comma separated child table naes
+   * @param {String} [args.fields=*] - commas separated column names of this table
+   * @param {String} [args.fields*=*] - commas separated column names of child table(* is a natural number 'i' where i is index of child table in comma separated list)
+   * @param {String} [args.where]  - where clause with conditions within ()
+   * @param {String} [args.where*] - where clause with conditions within ()(* is a natural number 'i' where i is index of child table in comma separated list)
+   * @param {String} [args.limit]  - number of rows to be limited (has default,min,max values in config)
+   * @param {String} [args.limit*] -  number of rows to be limited  of child table(* is a natural number 'i' where i is index of child table in comma separated list)
+   * @param {String} [args.offset] - offset from which to get the number of rows
+   * @param {String} [args.offset*] - offset from which to get the number of rows of child table(* is a natural number 'i' where i is index of child table in comma separated list)
+   * @param {String} [args.sort]   - comma separated column names where each column name is cn ascending and -cn is cn descending
+   * @param {String} [args.sort*] - comma separated column names where each column name is cn ascending and -cn is cn descending(* is a natural number 'i' where i is index of child table in comma separated list)
+   * @returns {Promise<Object[]>}
+   */
+
+  // todo : add conditionGraph
+  // todo : implement nestedread
+  async nestedList({hm: childs = '', bt: parents = '', mm: many = '', where, fields: fields1, f, ...rest}) {
+    let fields = fields1 || f || '*';
+    try {
+
+      if (fields !== '*' && fields.split(',').indexOf(this.pks[0].cn) === -1) {
+        fields += ',' + this.pks[0].cn;
+      }
+
+      for (const parent of parents.split(',')) {
+        const {cn} = this.belongsToRelations.find(({rtn}) => rtn === parent) || {};
+        if (fields !== '*' && fields.split(',').indexOf(cn) === -1) {
+          fields += ',' + cn;
+        }
+      }
+
+
+      const items = await this.list({childs, where, fields, ...rest});
+
+      if (items && items.length) {
+        await Promise.all([...new Set(childs.split(','))].map((child, index) => child && this._getChildListInParent({
+          parent: items,
+          child
+        }, rest, index)));
+      }
+
+      await Promise.all(parents.split(',').map((parent, index): any => {
+        if (!parent) {
+          return;
+        }
+        const {cn, rcn} = this.belongsToRelations.find(({rtn}) => rtn === parent) || {};
+        const parentIds = [...new Set(items.map(c => c[cn] || c[this.columnToAlias[cn]]))];
+        return this._belongsTo({parent, rcn, parentIds, childs: items, cn, ...rest}, index);
+      }))
+
+
+      if (items && items.length) {
+        await Promise.all([...new Set(many.split(','))].map((child, index) => child && this._getManyToManyList({
+          parent: items,
+          child
+        }, rest, index)));
+      }
+
+
+      return items;
+    } catch (e) {
+      console.log(e);
+      throw e;
+    }
+  }
+
+  // todo: naming
+  public m2mNotChildren({pid = null, assoc = null, ...args}): Promise<any> {
+    if (pid === null || assoc === null) {
+      return null;
+    }
+    // @ts-ignore
+    const {tn, cn, vtn, vcn, vrcn, rtn, rcn} = this.manyToManyRelations.find(({vtn}) => assoc === vtn) || {};
+    const childModel = this.dbModels[rtn];
+
+    const {fields, where, limit, offset, sort, condition, conditionGraph = null} = childModel._getListArgs(args);
+
+    const query = childModel.$db
+      .select(childModel.selectQuery(fields))
+      .xwhere(where, childModel.selectQuery(''))
+      .condition(condition, childModel.selectQuery(''))
+      .conditionGraph(conditionGraph)
+      .whereNotIn(rcn,
+        childModel.dbDriver(rtn)
+          .select(`${rtn}.${rcn}`)
+          .join(vtn, `${rtn}.${rcn}`, `${vtn}.${vrcn}`)
+          .where(`${vtn}.${vcn}`, pid)
+      );
+    childModel._paginateAndSort(query, {limit, offset, sort});
+
+    return this._run(query);
+  }
+
+
+  // todo: naming
+  public m2mNotChildrenCount({pid = null, assoc = null, ...args}): Promise<any> {
+
+    if (pid === null || assoc === null) {
+      return null;
+    }
+    // @ts-ignore
+    const {tn, cn, vtn, vcn, vrcn, rtn, rcn} = this.manyToManyRelations.find(({vtn}) => assoc === vtn) || {};
+    const childModel = this.dbModels[rtn];
+
+    const {where, condition, conditionGraph = null} = childModel._getListArgs(args);
+
+    const query = childModel.$db
+      .count(`${rcn} as count`)
+      .xwhere(where, childModel.selectQuery(''))
+      .condition(condition, childModel.selectQuery(''))
+      .conditionGraph(conditionGraph)
+      .whereNotIn(rcn,
+        childModel.dbDriver(rtn)
+          .select(`${rtn}.${rcn}`)
+          .join(vtn, `${rtn}.${rcn}`, `${vtn}.${vrcn}`)
+          .where(`${vtn}.${vcn}`, pid)
+      ).first();
+
+    return this._run(query);
+  }
+
 
   /**
    * Gets child list along with its parent
@@ -1211,7 +1409,7 @@ class BaseModelSql extends BaseModel {
     fields = fields || f || '*';
     try {
 
-      for (let parent of parents.split('~')) {
+      for (const parent of parents.split('~')) {
         const {cn} = this.belongsToRelations.find(({rtn}) => rtn === parent) || {};
         if (fields !== '*' && fields.split(',').indexOf(cn) === -1) {
           fields += ',' + cn;
@@ -1247,7 +1445,7 @@ class BaseModelSql extends BaseModel {
    * @private
    */
   async _belongsTo({parent, rcn, parentIds, childs, cn, ...rest}, index) {
-    let {fields} = this._getChildListArgs(rest, index);
+    let {fields} = this._getChildListArgs(rest, index, parent);
     if (fields !== '*' && fields.split(',').indexOf(rcn) === -1) {
       fields += ',' + rcn;
     }
@@ -1262,7 +1460,7 @@ class BaseModelSql extends BaseModel {
     const gs = _.groupBy(parents, this.dbModels[parent]?.columnToAlias?.[rcn] || rcn);
 
     childs.forEach(row => {
-      row[this.dbModels?.[parent]?._tn || parent] = gs[row[this.dbModels[parent]?.columnToAlias?.[cn] || cn]]?.[0];
+      row[`${this.dbModels?.[parent]?._tn || parent}Read`] = gs[row[this?.columnToAlias?.[cn] || cn]]?.[0];
     })
   }
 
@@ -1280,7 +1478,8 @@ class BaseModelSql extends BaseModel {
    */
   async hasManyListGQL({child, ids, ...rest}) {
     try {
-      let {fields, where, limit, offset, conditionGraph, sort} = this._getChildListArgs(rest);
+      const {where, limit, offset, conditionGraph, sort, ...restArgs} = this._getChildListArgs(rest);
+      let {fields} = restArgs;
 
       const {cn} = this.hasManyRelations.find(({tn}) => tn === child) || {};
 
@@ -1290,7 +1489,7 @@ class BaseModelSql extends BaseModel {
 
       fields = fields.split(',').map(c => `${child}.${c}`).join(',')
 
-      let childs = await this._run(this._paginateAndSort(this.dbDriver.union(
+      const childs = await this._run(this._paginateAndSort(this.dbDriver.union(
         ids.map(p => {
           const query = this
             .dbDriver(child)
@@ -1303,7 +1502,7 @@ class BaseModelSql extends BaseModel {
           this._paginateAndSort(query, {limit, offset}, child);
           return this.isSqlite() ? this.dbDriver.select().from(query) : query;
         }), !this.isSqlite()
-      ), {sort} as any, child));
+      ), {sort, limit: 1000} as any, child));
 
 
       // return _.groupBy(childs, cn);
@@ -1337,7 +1536,7 @@ class BaseModelSql extends BaseModel {
 
       const {cn} = this.hasManyRelations.find(({tn}) => tn === child) || {};
 
-      let childs = await this._run(this.dbDriver.unionAll(
+      const childs = await this._run(this.dbDriver.unionAll(
         ids.map(p => {
           const query = this
             .dbDriver(child)
@@ -1370,7 +1569,7 @@ class BaseModelSql extends BaseModel {
    * @returns {Object} query appended with paginate and sort params
    * @private
    */
-  _paginateAndSort(query, {limit = 20, offset = 0, sort = ''}: XcFilter, table?: string, isUnion?:boolean) {
+  _paginateAndSort(query, {limit = 20, offset = 0, sort = ''}: XcFilter, table?: string, isUnion?: boolean) {
     query.offset(offset)
       .limit(limit);
 
@@ -1424,7 +1623,7 @@ class BaseModelSql extends BaseModel {
    * @private
    */
   _getListArgs(args: XcFilterWithAlias): XcFilter {
-    let obj: XcFilter = {};
+    const obj: XcFilter = {};
     obj.where = args.where || args.w || '';
     obj.condition = args.condition || args.c || {};
     obj.conditionGraph = args.conditionGraph || {};
@@ -1443,18 +1642,24 @@ class BaseModelSql extends BaseModel {
    * @returns {Object} consisting of fields*,where*,limit*,offset*,sort*
    * @private
    */
-  _getChildListArgs(args: any, index?: number) {
+  _getChildListArgs(args: any, index?: number, child?: string) {
     index++;
-    let obj: XcFilter = {};
+    const obj: XcFilter = {};
     obj.where = args[`where${index}`] || args[`w${index}`] || '';
     obj.limit = Math.max(Math.min(args[`limit${index}`] || args[`l${index}`] || this.config.limitDefault, this.config.limitMax), this.config.limitMin);
     obj.offset = args[`offset${index}`] || args[`o${index}`] || 0;
-    obj.fields = args[`fields${index}`] || args[`f${index}`] || '*';
+    obj.fields = args[`fields${index}`] || args[`f${index}`] || this.getPKandPV(child);
     obj.sort = args[`sort${index}`] || args[`s${index}`];
     return obj;
   }
 
-  // @ts-ignore
+  private getPKandPV(child: string) {
+    return child ?
+      (this.dbModels[child]?.columns?.filter(col => col.pk || col.pv).map(col => col.cn) || ['*']).join(',')
+      : '*';
+  }
+
+// @ts-ignore
   public selectQuery(fields) {
     const fieldsArr = fields.split(',');
     return this.columns?.reduce((selectObj, col) => {
@@ -1462,8 +1667,8 @@ class BaseModelSql extends BaseModel {
         !fields
         || fieldsArr.includes('*')
         || fieldsArr.includes(`${this.tn}.*`)
-        || fields.includes(col._cn)
-        || fields.includes(col.cn)
+        || fieldsArr.includes(col._cn)
+        || fieldsArr.includes(col.cn)
       ) {
         selectObj[col._cn] = `${this.tn}.${col.cn}`;
       }

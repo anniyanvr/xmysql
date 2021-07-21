@@ -1,4 +1,3 @@
-import NcMetaIO from "../meta/NcMetaIO";
 import {
   IEmailAdapter,
   IStorageAdapter,
@@ -8,24 +7,26 @@ import {
   XcStoragePlugin, XcWebhookNotificationPlugin
 } from "nc-plugin";
 
-import S3PluginConfig from "../../../plugins/s3";
+import BackblazePluginConfig from "../../../plugins/backblaze";
+import DiscordPluginConfig from "../../../plugins/discord";
 import GcsPluginConfig from "../../../plugins/gcs";
 import LinodePluginConfig from "../../../plugins/linode";
-import BackblazePluginConfig from "../../../plugins/backblaze";
-import VultrPluginConfig from "../../../plugins/vultr";
-import OvhCloudPluginConfig from "../../../plugins/ovhCloud";
-import MinioPluginConfig from "../../../plugins/mino";
-import SpacesPluginConfig from "../../../plugins/spaces";
-import UpcloudPluginConfig from "../../../plugins/upcloud";
-import SMTPPluginConfig from "../../../plugins/smtp";
-import SlackPluginConfig from "../../../plugins/slack";
-import TeamsPluginConfig from "../../../plugins/teams";
 import MattermostPluginConfig from "../../../plugins/mattermost";
-import DiscordPluginConfig from "../../../plugins/discord";
-import TwilioWhatsappPluginConfig from "../../../plugins/twilioWhatsapp";
+import MinioPluginConfig from "../../../plugins/mino";
+import OvhCloudPluginConfig from "../../../plugins/ovhCloud";
+import S3PluginConfig from "../../../plugins/s3";
+import ScalewayPluginConfig from "../../../plugins/scaleway";
+import SlackPluginConfig from "../../../plugins/slack";
+import SMTPPluginConfig from "../../../plugins/smtp";
+import SpacesPluginConfig from "../../../plugins/spaces";
+import TeamsPluginConfig from "../../../plugins/teams";
 import TwilioPluginConfig from "../../../plugins/twilio";
-
+import TwilioWhatsappPluginConfig from "../../../plugins/twilioWhatsapp";
+import UpcloudPluginConfig from "../../../plugins/upcloud";
+import VultrPluginConfig from "../../../plugins/vultr";
 import Noco from "../Noco";
+import NcMetaIO from "../meta/NcMetaIO";
+
 import Local from "./adapters/storage/Local";
 
 const defaultPlugins = [
@@ -45,6 +46,7 @@ const defaultPlugins = [
   LinodePluginConfig,
   UpcloudPluginConfig,
   SMTPPluginConfig,
+  ScalewayPluginConfig,
 ]
 
 class NcPluginMgr {
@@ -95,8 +97,11 @@ class NcPluginMgr {
           pluginConfig.input = JSON.parse(pluginConfig.input);
         }
 
-        await tempPlugin.init(pluginConfig?.input);
-
+        try {
+          await tempPlugin.init(pluginConfig?.input);
+        } catch (e) {
+          console.log(`Plugin(${plugin?.title}) initialization failed : ${e.message}`)
+        }
       }
 
     }
@@ -127,6 +132,43 @@ class NcPluginMgr {
 
   }
 
+  public async test(args: any): Promise<boolean> {
+    switch (args.category) {
+      case 'Storage': {
+        const plugin = defaultPlugins.find(pluginConfig => pluginConfig?.title === args.title);
+        const tempPlugin = new plugin.builder(this.app, plugin);
+        await tempPlugin.init(args?.input);
+        return tempPlugin?.getAdapter()?.test?.();
+      }
+        break;
+      default:
+        throw new Error('Not implemented');
+    }
+  }
+
 }
 
 export default NcPluginMgr;
+
+/**
+ * @copyright Copyright (c) 2021, Xgene Cloud Ltd
+ *
+ * @author Pranav C Balan <pranavxc@gmail.com>
+ * @author Bhanu P Chaudhary <bhanu423@gmail.com>
+ *
+ * @license GNU AGPL version 3 or any later version
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */

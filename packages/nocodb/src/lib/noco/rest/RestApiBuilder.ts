@@ -1,48 +1,40 @@
-// import {
-//     ExpressXcTsRoutes,
-//     ExpressXcTsRoutesBt,
-//     ExpressXcTsRoutesHm,
-//     ModelXcMetaFactory,
-//     SwaggerXc,
-//     SwaggerXcHm,
-//     SwaggerXcBt
-// } from 'nc-help';
+
+import fs from 'fs';
+import path from 'path';
+
+import autoBind from "auto-bind";
+import debug from 'debug';
+import * as ejs from 'ejs';
+import {Router} from "express";
+import {glob} from "glob";
+import mkdirp from 'mkdirp';
+
+import {DbConfig, NcConfig} from "../../../interface/config";
+import ModelXcMetaFactory from "../../sqlMgr/code/models/xc/ModelXcMetaFactory";
+import SwaggerXc from "../../sqlMgr/code/routers/xc-ts/SwaggerXc";
+import SwaggerXcBt from "../../sqlMgr/code/routers/xc-ts/SwaggerXcBt";
+import SwaggerXcHm from "../../sqlMgr/code/routers/xc-ts/SwaggerXcHm";
+import ExpressXcTsRoutes from "../../sqlMgr/code/routes/xc-ts/ExpressXcTsRoutes";
+import ExpressXcTsRoutesBt from "../../sqlMgr/code/routes/xc-ts/ExpressXcTsRoutesBt";
+import ExpressXcTsRoutesHm from "../../sqlMgr/code/routes/xc-ts/ExpressXcTsRoutesHm";
+import NcHelp from "../../utils/NcHelp";
+import NcProjectBuilder from "../NcProjectBuilder";
+import Noco from "../Noco";
+import BaseApiBuilder, {IGNORE_TABLES} from "../common/BaseApiBuilder";
+import NcMetaIO from "../meta/NcMetaIO";
 
 import {RestCtrl} from "./RestCtrl";
 import {RestCtrlBelongsTo} from "./RestCtrlBelongsTo";
-import {RestCtrlHasMany} from "./RestCtrlHasMany";
-
-import {DbConfig, NcConfig} from "../../../interface/config";
-import Noco from "../Noco";
-import NcHelp from "../../utils/NcHelp";
-import {Router} from "express";
-import autoBind from "auto-bind";
-import fs from 'fs';
-import path from 'path';
-import mkdirp from 'mkdirp';
-import * as ejs from 'ejs';
-import debug from 'debug';
-
-import BaseApiBuilder, {IGNORE_TABLES} from "../common/BaseApiBuilder";
-import {glob} from "glob";
-import {RestCtrlProcedure} from "./RestCtrlProcedure";
-import NcMetaIO from "../meta/NcMetaIO";
 import {RestCtrlCustom} from "./RestCtrlCustom";
-import NcProjectBuilder from "../NcProjectBuilder";
-import ModelXcMetaFactory from "../../sqlMgr/code/models/xc/ModelXcMetaFactory";
-import ExpressXcTsRoutes from "../../sqlMgr/code/routes/xc-ts/ExpressXcTsRoutes";
-import SwaggerXc from "../../sqlMgr/code/routers/xc-ts/SwaggerXc";
-import ExpressXcTsRoutesHm from "../../sqlMgr/code/routes/xc-ts/ExpressXcTsRoutesHm";
-import ExpressXcTsRoutesBt from "../../sqlMgr/code/routes/xc-ts/ExpressXcTsRoutesBt";
-import SwaggerXcHm from "../../sqlMgr/code/routers/xc-ts/SwaggerXcHm";
-import SwaggerXcBt from "../../sqlMgr/code/routers/xc-ts/SwaggerXcBt";
+import {RestCtrlHasMany} from "./RestCtrlHasMany";
+import {RestCtrlProcedure} from "./RestCtrlProcedure";
 
 
 const log = debug('nc:api:rest');
 const NC_CUSTOM_ROUTE_KEY = '__xc_custom';
 
 export class RestApiBuilder extends BaseApiBuilder<Noco> {
-
+  public readonly type='rest';
   private controllers: { [key: string]: RestCtrlBelongsTo | RestCtrl | RestCtrlHasMany | RestCtrlCustom };
   private procedureCtrl: RestCtrlProcedure;
   private routers: { [key: string]: Router };
@@ -53,16 +45,16 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
   constructor(app: Noco, projectBuilder: NcProjectBuilder, config: NcConfig, connectionConfig: DbConfig, xcMeta?: NcMetaIO) {
     super(app, projectBuilder, config, connectionConfig);
     autoBind(this)
-
-    this.models = {};
     this.controllers = {};
     this.routers = {};
     this.hooks = {};
     this.xcMeta = xcMeta;
-
-
   }
 
+  public async init(): Promise<void> {
+    await super.init();
+    await this.loadRoutes(null);
+  }
 
   public async loadRoutes(customRoutes: any): Promise<any> {
     this.customRoutes = customRoutes;
@@ -198,7 +190,7 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
       if (!rootPath) {
         continue;
       }
-      this.router.use(rootPath, router);
+      this.router.use(encodeURI(rootPath), router);
 
       this.apiCount += routes.length;
       this.controllers[meta.title] = new RestCtrl(this.app, this.models, meta.title, routes, rootPath, this.acls, middlewareBody);
@@ -292,9 +284,17 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
     let tables;
     const swaggerRefs: { [table: string]: any[] } = {};
 
-
     /* Get all relations */
     const relations = await this.relationsSyncAndGet();
+
+    // set table name alias
+    relations.forEach(r => {
+      r._rtn = args?.tableNames?.find(t => t.tn === r.rtn)?._tn || this.getTableNameAlias(r.rtn);
+      r._tn = args?.tableNames?.find(t => t.tn === r.tn)?._tn || this.getTableNameAlias(r.tn);
+      r.enabled = true;
+    })
+
+
     this.relationsCount = relations.length;
 
     if (args?.tableNames?.length) {
@@ -439,7 +439,7 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
         /* create table controllers and map the routes */
         this.controllers[table.tn] = new RestCtrl(this.app, this.models, table.tn, routes, rootPath, this.acls, null);
         this.controllers[table.tn].mapRoutes(router, this.customRoutes);
-        this.router.use(rootPath, router);
+        this.router.use(encodeURI(rootPath), router);
 
         /* handle relational routes  */
         relationRoutes.push(async () => {
@@ -545,16 +545,15 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
             this.controllers[name].mapRoutes(router, this.customRoutes);
           }
         });
-
-
       }
-
-
     });
 
     /* handle xc_tables update in parallel */
     await NcHelp.executeOperations(tableRoutes, this.connectionConfig.client);
     await NcHelp.executeOperations(relationRoutes, this.connectionConfig.client);
+
+
+    await this.getManyToManyRelations();
 
 
     const swaggerDoc = {
@@ -602,6 +601,8 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
   }
 
   public async onTableCreate(tn: string, args?: any): Promise<void> {
+
+   await super.onTableCreate(tn,args);
 
     const columns = args.columns ? {
       [tn]: args.columns?.map(({altered: _al, ...rest}) => rest)
@@ -925,7 +926,7 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
 
           for (const [i, newHmRoute] of Object.entries(hmRoutes)) {
             const oldHmRoute: any = oldHmRoutes[i];
-            this.log(`xcTableRename : Updating routes for ${relationTable}Hm${newTablename} on behalf of '%table rename'  - \'%s\' => \'%s\' (HasMany relation)`, relationTable, oldTablename, newTablename)
+            this.log(`xcTableRename : Updating routes for ${relationTable}Hm${newTablename} on behalf of '%table rename'  - '%s' => '%s' (HasMany relation)`, relationTable, oldTablename, newTablename)
 
 
             await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_routes', {
@@ -955,7 +956,7 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
 
           for (const [i, newBtRoute] of Object.entries(newBtRoutes)) {
             const oldBtRoute: any = oldBtRoutes[i];
-            this.log(`xcTableRename : Updating routes for ${relationTable}Bt${oldTablename} on behalf of '%table rename'  - \'%s\' => \'%s\' (BelongsTo relation)`, relationTable, oldTablename, newTablename)
+            this.log(`xcTableRename : Updating routes for ${relationTable}Bt${oldTablename} on behalf of '%table rename'  - '%s' => '%s' (BelongsTo relation)`, relationTable, oldTablename, newTablename)
             await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_routes', {
               title: `${relationTable}Bt${newTablename}`,
               path: newBtRoute.path,
@@ -994,10 +995,9 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
 
     this.deleteRoutesForTables([tnp, tnc])
     const relations = await this.getXcRelationList();
-
     {
       const swaggerArr = [];
-      const columns = await this.getColumnList(tnp);
+      const columns = this.metas[tnp]?.columns;
       const hasMany = this.extractHasManyRelationsOfTable(relations, tnp);
 
       // set table name alias
@@ -1013,6 +1013,13 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
 
       // update old model meta with new details
       const existingModel = await this.xcMeta.metaGet(this.projectId, this.dbAlias, 'nc_models', {'title': tnp});
+      let queryParams;
+      try {
+        queryParams = JSON.parse(existingModel.query_params);
+      } catch (e) { /* */
+      }
+
+
       swaggerArr.push(JSON.parse(existingModel.schema));
       if (existingModel) {
         this.log(`onRelationCreate : Updating model metadata for parent table '%s'`, tnp);
@@ -1026,9 +1033,22 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
           hasMany: meta.hasMany,
         });
 
+
+        /* Add new has many relation to virtual columns */
+        oldMeta.v = oldMeta.v || [];
+        oldMeta.v.push({
+          hm: meta.hasMany.find(hm => hm.rtn === tnp && hm.tn === tnc),
+          _cn: `${this.getTableNameAlias(tnp)} => ${this.getTableNameAlias(tnc)}`
+        })
+
+
+        if (queryParams?.showFields) {
+          queryParams.showFields[`${this.getTableNameAlias(tnp)} => ${this.getTableNameAlias(tnc)}`] = true;
+        }
+
         await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_models', {
-          title: tnp,
           meta: JSON.stringify(oldMeta),
+          ...(queryParams ? {query_params: JSON.stringify(queryParams)} : {})
         }, {'title': tnp})
 
       }
@@ -1073,7 +1093,7 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
     }
     {
       const swaggerArr = [];
-      const columns = await this.getColumnList(tnp);
+      const columns = this.metas[tnc]?.columns;
       const belongsTo = this.extractBelongsToRelationsOfTable(relations, tnc);
       const ctx = this.generateContextForTable(tnc, columns, relations, [], belongsTo);
       const meta = ModelXcMetaFactory.create(this.connectionConfig, this.generateRendererArgs(ctx)).getObject();
@@ -1088,6 +1108,14 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
 
       // update old model meta with new details
       const existingModel = await this.xcMeta.metaGet(this.projectId, this.dbAlias, 'nc_models', {'title': tnc});
+
+      let queryParams;
+      try {
+        queryParams = JSON.parse(existingModel.query_params);
+      } catch (e) { /* */
+      }
+
+
       swaggerArr.push(JSON.parse(existingModel.schema))
       if (existingModel) {
         meta.belongsTo.forEach(hm => {
@@ -1099,9 +1127,22 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
         Object.assign(oldMeta, {
           belongsTo: meta.belongsTo,
         });
+
+        /* Add new belongs to relation to virtual columns */
+        oldMeta.v = oldMeta.v || [];
+        oldMeta.v.push({
+          bt: meta.belongsTo.find(hm => hm.rtn === tnp && hm.tn === tnc),
+          _cn: `${this.getTableNameAlias(tnp)} <= ${this.getTableNameAlias(tnc)}`
+        })
+
+
+        if (queryParams?.showFields) {
+          queryParams.showFields[`${this.getTableNameAlias(tnp)} <= ${this.getTableNameAlias(tnc)}`] = true;
+        }
+
         await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_models', {
-          title: tnc,
-          meta: JSON.stringify(oldMeta)
+          meta: JSON.stringify(oldMeta),
+          ...(queryParams ? {query_params: JSON.stringify(queryParams)} : {})
         }, {'title': tnc})
       }
 
@@ -1155,7 +1196,7 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
     this.log('Within relation delete event - \'%s\' ==> \'%s\'', tnp, tnc)
     this.deleteRoutesForTables([tnp, tnc])
 
-    const relations = await this.getRelationList();
+    const relations = await this.getXcRelationList();
 
     {
       const hasMany = this.extractHasManyRelationsOfTable(relations, tnp);
@@ -1167,7 +1208,6 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
       const tagName = `${tnp}HasMany${tnc}`;
       const swaggerObj = this.deleteTagFromSwaggerObj(existingModel.schema, tagName);
 
-
       if (existingModel) {
         this.log(`Updating model metadata for parent table '%s'`, tnp);
 
@@ -1175,8 +1215,10 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
         const oldMeta = JSON.parse(existingModel.meta);
         Object.assign(oldMeta, {
           hasMany: meta.hasMany,
+          v: oldMeta.v.filter(({hm}) => !hm || hm.rtn !== tnp || hm.tn !== tnc)
         });
 
+        // todo: delete from query_params
         await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_models', {
           title: tnp,
           meta: JSON.stringify(oldMeta),
@@ -1206,10 +1248,12 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
         this.log(`Updating model metadata for child table '%s'`, tnc);
         // todo: persisting old table_alias and columnAlias
         const oldMeta = JSON.parse(existingModel.meta);
+
         Object.assign(oldMeta, {
           belongsTo: meta.belongsTo,
+          v: oldMeta.v.filter(({bt}) => !bt || bt.rtn !== tnp || bt.tn !== tnc)
         });
-
+        // todo: delete from query_params
         await this.xcMeta.metaUpdate(this.projectId,
           this.dbAlias,
           'nc_models', {
@@ -1442,8 +1486,8 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
     this.log('populteProcedureAndFunctionRoutes');
     const router = this.routers.___procedure = Router();
 
-    let functions = [];
-    let procedures = [];
+    const functions = [];
+    const procedures = [];
     // enable extra
     // try {
     //     functions = (await this.sqlClient.functionList())?.data?.list;
@@ -1508,9 +1552,13 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
       let swaggerBaseDocument: any = JSON.parse(JSON.stringify(await import('./ui/auth/swagger-base.xc.json')));
 
       if (this.config?.auth?.jwt?.dbAlias !== this.connectionConfig.meta.dbAlias) {
-        swaggerBaseDocument = {...swaggerBaseDocument, tags: [], definitions: {}, paths: {}, host: req.get('host')};
+        swaggerBaseDocument = {...swaggerBaseDocument, tags: [], definitions: {}, paths: {}};
       }
 
+      const host = process.env.NC_PUBLIC_URL ? new URL(process.env.NC_PUBLIC_URL)?.host : req.get('host');
+      const scheme = process.env.NC_PUBLIC_URL ? new URL(process.env.NC_PUBLIC_URL)?.protocol.slice(0, -1) : req.protocol;
+      swaggerBaseDocument.host = host;
+      swaggerBaseDocument.schemes = [scheme, scheme === 'http' ? 'https' : 'http'];
       glob.sync(path.join(this.config.toolDir, 'nc', this.projectId, this.getDbAlias(), 'swagger', 'swagger.json')).forEach(jsonFile => {
         const swaggerJson = JSON.parse(fs.readFileSync(jsonFile, 'utf8'));
         swaggerBaseDocument.tags.push(...swaggerJson.tags);
@@ -1638,6 +1686,56 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
     })
   }
 
+
+  protected async ncUpManyToMany(): Promise<any> {
+    const metas = await super.ncUpManyToMany();
+    if (!metas) {
+      return;
+    }
+    for (const meta of metas) {
+      const ctx = this.generateContextForTable(meta.tn, meta.columns, [], meta.hasMany, meta.belongsTo, meta.type, meta._tn);
+
+      /* create routes for table */
+      const routes = new ExpressXcTsRoutes({dir: '', ctx, filename: ''}).getObjectWithoutFunctions();
+
+      /* create nc_routes, add new routes or update order */
+      const routesInsertion = routes.map((route, i) => {
+        return async () => {
+          if (!await this.xcMeta.metaGet(this.projectId, this.dbAlias, 'nc_routes', {
+            path: route.path,
+            tn: meta.tn,
+            title: meta.tn,
+            type: route.type
+          })) {
+            await this.xcMeta.metaInsert(this.projectId, this.dbAlias, 'nc_routes', {
+              acl: JSON.stringify(route.acl),
+              handler: JSON.stringify(route.handler),
+              order: i,
+              path: route.path,
+              tn: meta.tn,
+              title: meta.tn,
+              type: route.type,
+            })
+          } else {
+            await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_routes', {
+              order: i,
+            }, {
+              path: route.path,
+              tn: meta.tn,
+              title: meta.tn,
+              type: route.type
+            })
+          }
+        }
+      });
+
+      await NcHelp.executeOperations(routesInsertion, this.connectionConfig.client);
+
+    }
+
+    // add new routes
+
+  }
 }
 
 
@@ -1663,4 +1761,3 @@ export class RestApiBuilder extends BaseApiBuilder<Noco> {
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  *
  */
-

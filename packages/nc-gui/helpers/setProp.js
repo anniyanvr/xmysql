@@ -6,12 +6,12 @@ function setProp(obj, props, value) {
   if (!obj[prop]) {
     Vue.set(obj, prop, {})
   } else {
-    Vue.set(obj, prop, {...obj[prop]})
+    Vue.set(obj, prop, { ...obj[prop] })
   }
 
   if (!props.length) {
     if (value && typeof value === 'object') {
-      obj[prop] = Array.isArray(value) ? [...value] : {...obj[prop], ...value}
+      obj[prop] = Array.isArray(value) ? [...value] : { ...obj[prop], ...value }
     } else {
       obj[prop] = value
     }

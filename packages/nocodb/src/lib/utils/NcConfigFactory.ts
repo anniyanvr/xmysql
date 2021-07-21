@@ -1,10 +1,9 @@
-import {AuthConfig, DbConfig, MailerConfig, NcConfig} from "../../interface/config";
 import {SqlClientFactory} from 'nc-help';
-
-// import {v4 as uuidv4} from 'uuid';
-// import fs from 'fs';
-// import path from 'path';
+import fs from 'fs';
 import parseDbUrl from "parse-database-url";
+
+import {AuthConfig, DbConfig, MailerConfig, NcConfig} from "../../interface/config";
+import * as path from "path";
 
 const {uniqueNamesGenerator, starWars, adjectives, animals} = require('unique-names-generator');
 
@@ -41,6 +40,17 @@ export default class NcConfigFactory implements NcConfig {
     };
 
 
+    config.port = +(process?.env?.PORT ?? 8080);
+    config.env = process.env?.NODE_ENV || 'dev';
+    config.workingEnv = process.env?.NODE_ENV || 'dev';
+    config.toolDir = this.getToolDir();
+    config.projectType = config?.envs?.[config.workingEnv]?.db?.[0]?.meta?.api?.type || 'rest';
+
+    if (config.meta?.db?.connection?.filename) {
+      config.meta.db.connection.filename = path.join(config.toolDir, config.meta.db.connection.filename)
+    }
+
+
     if (process.env.NC_DB) {
       config.meta.db = this.metaUrlToDbConfig(process.env.NC_DB)
     }
@@ -61,32 +71,9 @@ export default class NcConfigFactory implements NcConfig {
     }
 
 
-    /*    if (process.env.NC_MAILER) {
-          config.mailer = {
-            from: process.env.NC_MAILER_FROM,
-            options: {
-              "host": process.env.NC_MAILER_HOST,
-              "port": parseInt(process.env.NC_MAILER_PORT, 10),
-              "secure": process.env.NC_MAILER_SECURE === 'true',
-              "auth": {
-                "user": process.env.NC_MAILER_USER,
-                "pass": process.env.NC_MAILER_PASS
-              }
-            }
-          }
-        }*/
-
-
     if (process.env.NC_PUBLIC_URL) {
       config.envs[process.env.NODE_ENV || 'dev'].publicUrl = process.env.NC_PUBLIC_URL;
     }
-
-
-    config.port = +(process?.env?.PORT ?? 8080);
-    config.env = process.env?.NODE_ENV || 'dev';
-    config.workingEnv = process.env?.NODE_ENV || 'dev';
-    config.toolDir = process.env.NC_TOOL_DIR || process.cwd();
-    config.projectType = config?.envs?.[config.workingEnv]?.db?.[0]?.meta?.api?.type || 'rest';
 
 
     if (process.env.NC_DASHBOARD_URL) {
@@ -175,10 +162,14 @@ export default class NcConfigFactory implements NcConfig {
     config.port = +(process?.env?.PORT ?? 8080);
     config.env = process.env?.NODE_ENV || 'dev';
     config.workingEnv = process.env?.NODE_ENV || 'dev';
-    config.toolDir = process.env.NC_TOOL_DIR || process.cwd();
+    config.toolDir = this.getToolDir();
     config.projectType = config?.envs?.[config.workingEnv]?.db?.[0]?.meta?.api?.type || 'rest';
 
     return config;
+  }
+
+  public static getToolDir() {
+    return process.env.NC_TOOL_DIR || process.cwd();
   }
 
   public static hasDbUrl(): boolean {
@@ -397,7 +388,7 @@ export default class NcConfigFactory implements NcConfig {
     config.port = +(process?.env?.PORT ?? 8080);
     config.env = process.env?.NODE_ENV || 'dev';
     config.workingEnv = process.env?.NODE_ENV || 'dev';
-    config.toolDir = process.env.NC_TOOL_DIR || process.cwd();
+    config.toolDir = this.getToolDir();
     config.projectType = type || config?.envs?.[config.workingEnv]?.db?.[0]?.meta?.api?.type || 'rest';
 
     return config;
@@ -537,7 +528,7 @@ export default class NcConfigFactory implements NcConfig {
         }*/
   }
 
-  public version: string = '0.6';
+  public version = '0.6';
   public port: number;
   public auth?: AuthConfig;
   public env: "production" | "dev" | "test" | string;
@@ -568,7 +559,10 @@ export default class NcConfigFactory implements NcConfig {
 
 
   public static jdbcToXcUrl() {
-    if (process.env.NC_DATABASE_URL || process.env.DATABASE_URL) {
+    if (process.env.NC_DATABASE_URL_FILE || process.env.DATABASE_URL_FILE) {
+      const database_url = fs.readFileSync(process.env.NC_DATABASE_URL_FILE || process.env.DATABASE_URL_FILE, 'utf-8');
+      process.env.NC_DB = this.extractXcUrlFromJdbc(database_url);
+    } else if (process.env.NC_DATABASE_URL || process.env.DATABASE_URL) {
       process.env.NC_DB = this.extractXcUrlFromJdbc(process.env.NC_DATABASE_URL || process.env.DATABASE_URL);
     }
   }

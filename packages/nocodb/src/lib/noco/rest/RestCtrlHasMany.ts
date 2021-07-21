@@ -1,7 +1,10 @@
-import {BaseModelSql} from "../../dataMapper";
-import {NextFunction, Request, Response} from "express";
-import {Acl, Acls, Route} from "../../../interface/config";
 import autoBind from 'auto-bind';
+import {NextFunction, Request, Response} from "express";
+
+import {Acl, Acls, Route} from "../../../interface/config";
+import {BaseModelSql} from "../../dataMapper";
+
+
 import {RestBaseCtrl} from "./RestBaseCtrl";
 
 export class RestCtrlHasMany extends RestBaseCtrl {
@@ -124,7 +127,7 @@ export class RestCtrlHasMany extends RestBaseCtrl {
   public async hasManyList(req: Request | any, res): Promise<void> {
     const data = await req.parentModel.hasManyList({
       ...req.query,
-      childs: req.childModel.tn
+      childs: this.childTable // req.childModel.tn
     } as any);
     res.xcJson(data);
   }

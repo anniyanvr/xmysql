@@ -3,12 +3,10 @@
     <!--    <trialExpired v-if="$store.getters['windows/GtrHasTrialPeriodExpired']"></trialExpired>-->
     <splitpanes style="height:calc(100vh - 40px)" class="xc-theme">
       <pane min-size="10" :size="paneSize" max-size="50" style="overflow: auto">
-        <ProjectTreeView/>
+        <ProjectTreeView />
       </pane>
       <pane :size="100 - paneSize">
-
-        <ProjectTabs/>
-
+        <ProjectTabs />
 
         <!--        <splitpanes horizontal class="xc-theme">-->
         <!--          <pane :size=" mainPanelSize" min-size="50" style="overflow: auto">-->
@@ -24,13 +22,12 @@
         <!--        </splitpanes>-->
       </pane>
     </splitpanes>
-
   </v-container>
 </template>
 <script>
-import {Splitpanes, Pane} from 'splitpanes'
-import ProjectTabs from "@/components/projectTabs";
-import ProjectTreeView from "@/components/ProjectTreeView";
+import { Splitpanes, Pane } from 'splitpanes'
+import ProjectTabs from '@/components/projectTabs'
+import ProjectTreeView from '@/components/ProjectTreeView'
 // import ProjectLogs from "~/components/ProjectLogs";
 // import ProjectOutput from "~/components/ProjectOutput";
 // import trialExpired from "../../components/trialExpired";
@@ -41,7 +38,8 @@ export default {
     ProjectTabs,
     // ProjectLogs,
     // ProjectOutput,
-    Splitpanes, Pane,
+    Splitpanes,
+    Pane
     // trialExpired
 
     //   Multipane,
@@ -51,14 +49,12 @@ export default {
     return {
       paneSize: 20,
       mainPanelSize: 80
-    };
+    }
   },
 
   computed: {},
-  methods: {},
   watch: {},
   async created() {
-
     // const user = await validateInit();
     // if (user) {
     //   ga('send', 'event', 'init', 'corruption', user);
@@ -66,8 +62,8 @@ export default {
     // this.$store.dispatch('users/ActSetUserAbility');
     // this.$store.dispatch('users/ActSetUserAbility');
     this.$store.watch(
-      (state) => state.panelSize.treeView && state.panelSize.treeView.size,
-      (newSize) => this.paneSize = newSize
+      state => state.panelSize.treeView && state.panelSize.treeView.size,
+      (newSize) => { this.paneSize = newSize }
     )
     //
     // this.$store.watch(
@@ -76,15 +72,14 @@ export default {
     //     if (newState) this.$nextTick(() => this.mainPanelSize = 100)
     //   }
     // )
-
   },
 
   mounted() {
 
+  },
+  methods: {}
 
-  }
-
-};
+}
 </script>
 <style scoped>
 /deep/ .splitpanes__splitter {

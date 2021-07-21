@@ -1,6 +1,6 @@
-import BaseRender from "../../BaseRender";
+import BaseModelXcMeta from "./BaseModelXcMeta";
 
-class ModelXcMetaSqlite extends BaseRender {
+class ModelXcMetaSqlite extends BaseModelXcMeta {
 
   /**
    * @param dir
@@ -316,9 +316,6 @@ class ModelXcMetaSqlite extends BaseRender {
       case "set":
         str += `"SET(${column.dtxp})"`;
         break;
-      case "time":
-        str += `DataTypes.TIME`;
-        break;
       case "geometry":
         str += `DataTypes.GEOMETRY`;
         break;
@@ -530,10 +527,11 @@ class ModelXcMetaSqlite extends BaseRender {
 
       columnsArr.push(columnObj)
     }
+    this.mapDefaultPrimaryValue(columnsArr);
     return columnsArr;
   }
 
-  public getObject(): any {
+/*  public getObject(): any {
     return {
       tn: this.ctx.tn,
       _tn: this.ctx._tn,
@@ -545,7 +543,7 @@ class ModelXcMetaSqlite extends BaseRender {
       type: this.ctx.type,
     }
 
-  }
+  }*/
 
   private _getUIDataType(col): any {
     switch (this.getAbstractType(col)) {

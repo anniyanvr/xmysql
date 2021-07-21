@@ -1,62 +1,51 @@
-import Noco from "../Noco";
-import {Result, NcConfig} from "../../../interface/config";
-import {RestApiBuilder} from "../rest/RestApiBuilder";
-import {GqlApiBuilder} from "../gql/GqlApiBuilder";
-import {Handler, Router} from "express";
 import fs from 'fs';
 import path from 'path';
-import extract from 'extract-zip';
+
 import archiver from 'archiver';
+import axios from 'axios';
+import bodyParser from "body-parser";
+import {Handler, Router} from "express";
+import extract from 'extract-zip';
+import isDocker from 'is-docker';
 import multer from 'multer';
-import NcMetaIO, {META_TABLES} from "./NcMetaIO";
+import {nanoid} from 'nanoid';
 import {
-  // ExpressXcTsRoutesHm,
-  // ExpressXcTsRoutes,
-  // ExpressXcTsRoutesBt,
   SqlClientFactory, Tele
 } from 'nc-help'
-import NcHelp from "../../utils/NcHelp";
-import bodyParser from "body-parser";
-import projectAcl from "../../utils/projectAcl";
+import slash from 'slash';
 import {v4 as uuidv4} from 'uuid';
-import ProjectMgr from '../../sqlMgr/ProjectMgr';
 
-import {nanoid} from 'nanoid';
-import mimetypes, {mimeIcons} from "../../utils/mimeTypes";
-import IStorageAdapter from "../../../interface/IStorageAdapter";
-// import StorageFactory from "../plugins/adapters/storage/StorageFactory";
 import IEmailAdapter from "../../../interface/IEmailAdapter";
+import IStorageAdapter from "../../../interface/IStorageAdapter";
+import {NcConfig, Result} from "../../../interface/config";
+import {NcConfigFactory} from "../../index";
+import ProjectMgr from '../../sqlMgr/ProjectMgr';
+import ExpressXcTsRoutes from "../../sqlMgr/code/routes/xc-ts/ExpressXcTsRoutes";
+import ExpressXcTsRoutesBt from "../../sqlMgr/code/routes/xc-ts/ExpressXcTsRoutesBt";
+import ExpressXcTsRoutesHm from "../../sqlMgr/code/routes/xc-ts/ExpressXcTsRoutesHm";
+import NcHelp from "../../utils/NcHelp";
+import mimetypes, {mimeIcons} from "../../utils/mimeTypes";
+import projectAcl from "../../utils/projectAcl";
+import Noco from "../Noco";
+import {GqlApiBuilder} from "../gql/GqlApiBuilder";
+import NcPluginMgr from "../plugins/NcPluginMgr";
+import XcCache from "../plugins/adapters/cache/XcCache";
 import EmailFactory from "../plugins/adapters/email/EmailFactory";
 import Twilio from "../plugins/adapters/twilio/Twilio";
-import {NcConfigFactory} from "../../index";
-import XcCache from "../plugins/adapters/cache/XcCache";
-import axios from 'axios';
-
-
+import {RestApiBuilder} from "../rest/RestApiBuilder";
 import RestAuthCtrl from "../rest/RestAuthCtrlEE";
-import ExpressXcTsRoutesHm from "../../sqlMgr/code/routes/xc-ts/ExpressXcTsRoutesHm";
-import ExpressXcTsRoutesBt from "../../sqlMgr/code/routes/xc-ts/ExpressXcTsRoutesBt";
-import ExpressXcTsRoutes from "../../sqlMgr/code/routes/xc-ts/ExpressXcTsRoutes";
-import NcPluginMgr from "../plugins/NcPluginMgr";
-
-// import packageInfo from '../../../../package.json'
-// require('pkginfo')(module, 'version');
+import {packageVersion} from 'nc-help';
+import NcMetaIO, {META_TABLES} from "./NcMetaIO";
 
 const XC_PLUGIN_DET = 'XC_PLUGIN_DET';
 
-
-let packageInfo:any = {};
-try{
-  packageInfo = JSON.parse(fs.readFileSync('package.json','utf8'));
-}catch (_e) {}
+const NOCO_RELEASE = 'NOCO_RELEASE';
 
 export default class NcMetaMgr {
   public projectConfigs = {};
 
   public readonly pluginMgr: NcPluginMgr;
 
-  // public storageAdapter: IStorageAdapter;
-  // public emailAdapter: IEmailAdapter;
   public twilioInstance: Twilio;
 
   protected app: Noco;
@@ -65,8 +54,8 @@ export default class NcMetaMgr {
   protected xcMeta: NcMetaIO;
   protected projectMgr: any;
   // @ts-ignore
-  protected isEe: boolean = false;
-
+  protected isEe = false;
+  4
 
   constructor(app: Noco, config: NcConfig, xcMeta: NcMetaIO) {
     this.app = app;
@@ -84,8 +73,6 @@ export default class NcMetaMgr {
 
     await this.pluginMgr?.init();
 
-    await this.initStorage();
-    await this.initEmail();
     await this.initTwilio();
     await this.initCache();
     this.eeVerify();
@@ -102,7 +89,7 @@ export default class NcMetaMgr {
     router.get('/dl/:projectId/:dbAlias/:fileName', async (req, res) => {
       try {
         const type = mimetypes[path.extname(req.params.fileName).slice(1)] || 'text/plain';
-        const img = await this.storageAdapter.fileRead(path.join('nc', req.params.projectId, req.params.dbAlias, 'uploads', req.params.fileName));
+        const img = await this.storageAdapter.fileRead(slash(path.join('nc', req.params.projectId, req.params.dbAlias, 'uploads', req.params.fileName)));
         res.writeHead(200, {'Content-Type': type});
         res.end(img, 'binary');
       } catch (e) {
@@ -115,7 +102,7 @@ export default class NcMetaMgr {
     }));
 
     if (!process.env.NC_SERVERLESS_TYPE && !this.config.try) {
-      const upload = multer({dest: 'uploads/'})
+      const upload = multer({dest: path.join(this.config.toolDir, 'uploads')})
       router.post(this.config.dashboardPath, upload.single('file'))
     }
 
@@ -213,8 +200,7 @@ export default class NcMetaMgr {
         if (this.config.auth) {
           if (this.config.auth.jwt) {
 
-            let knex;
-            knex = this.xcMeta.knex;
+            const knex = this.xcMeta.knex;
 
             let projectHasAdmin = false;
             projectHasAdmin = !!(await knex('xc_users').first())
@@ -230,7 +216,7 @@ export default class NcMetaMgr {
               githubAuthEnabled: !!(process.env.NC_GITHUB_CLIENT_ID && process.env.NC_GITHUB_CLIENT_SECRET),
               oneClick: !!process.env.NC_ONE_CLICK,
               connectToExternalDB: !process.env.NC_CONNECT_TO_EXTERNAL_DB_DISABLED,
-              version: packageInfo?.version
+              version: packageVersion
             })
           }
           if (this.config.auth.masterKey) {
@@ -499,7 +485,7 @@ export default class NcMetaMgr {
         });
 
         archive.pipe(output);
-        archive.directory(path.join(this.config.toolDir, 'nc', args.project_id), `xc/${args.project_id}`);
+        archive.directory(path.join(this.config.toolDir, 'nc', args.project_id), `nc/${args.project_id}`);
         // archive.file(path.join(this.config.toolDir, 'config.xc.json'), {name: 'config.xc.json'});
         archive.finalize();
 
@@ -924,7 +910,7 @@ export default class NcMetaMgr {
       const fileName = `${nanoid(6)}${path.extname(file.originalname)}`
       const destPath = path.join('nc', this.getProjectId(args), this.getDbAlias(args), 'uploads');
 
-      await this.storageAdapter.fileCreate(path.join(destPath, fileName), file);
+      await this.storageAdapter.fileCreate(slash(path.join(destPath, fileName)), file);
 
       return {
         url: `${req.ncSiteUrl}/dl/${this.getProjectId(args)}/${this.getDbAlias(args)}/${fileName}`,
@@ -948,7 +934,7 @@ export default class NcMetaMgr {
       } else {
         destPath = path.join('nc', this.getProjectId(args), this.getDbAlias(args), 'uploads');
       }
-      let url = await this.storageAdapter.fileCreate(path.join(destPath, fileName), file);
+      let url = await this.storageAdapter.fileCreate(slash(path.join(destPath, fileName)), file);
       if (!url) {
         if (args?.args?.public) {
           url = `${req.ncSiteUrl}/dl/public/files/${fileName}`;
@@ -969,28 +955,6 @@ export default class NcMetaMgr {
     } finally {
       Tele.emit('evt', {evt_type: 'image:uploaded'})
     }
-  }
-
-  protected async initStorage(_overwrite = false): Promise<void> {
-    //
-    // const activeStorage = await this.xcMeta.metaGet(null, null, 'nc_plugins', {
-    //   active: true,
-    //   category: 'Storage'
-    // });
-    //
-    // this.storageAdapter = StorageFactory.create(activeStorage, overwrite);
-    // await this.storageAdapter?.init();
-  }
-
-  protected async initEmail(_overwrite = false): Promise<void> {
-
-    // const activeStorage = await this.xcMeta.metaGet(null, null, 'nc_plugins', {
-    //   active: true,
-    //   category: 'Email'
-    // });
-    //
-    // this.emailAdapter = EmailFactory.create(activeStorage, overwrite);
-    // await this.emailAdapter?.init();
   }
 
   protected async initTwilio(overwrite = false): Promise<void> {
@@ -1024,6 +988,9 @@ export default class NcMetaMgr {
           break;
         case 'getSharedViewData':
           result = await this.getSharedViewData(req, args);
+          break;
+        case 'xcRelease':
+          result = await this.xcRelease();
           break;
 
         default:
@@ -1082,6 +1049,9 @@ export default class NcMetaMgr {
           break;
         case 'xcVirtualTableUpdate':
           result = await this.xcVirtualTableUpdate(args);
+          break;
+        case 'ncProjectInfo':
+          result = await this.ncProjectInfo(args);
           break;
         case 'xcVirtualTableDelete':
           result = await this.xcVirtualTableDelete(args, req);
@@ -1367,6 +1337,10 @@ export default class NcMetaMgr {
           result = await this.xcModelSet(args);
           break;
 
+        case 'xcUpdateVirtualKeyAlias':
+          result = await this.xcUpdateVirtualKeyAlias(args);
+          break;
+
         case 'xcRelationsGet':
           result = await this.xcRelationsGet(args);
           break;
@@ -1467,6 +1441,14 @@ export default class NcMetaMgr {
 
         case 'xcVirtualRelationCreate':
           result = await this.xcVirtualRelationCreate(args, req);
+          break;
+
+        case 'xcM2MRelationCreate':
+          result = await this.xcM2MRelationCreate(args, req);
+          break;
+
+        case 'xcRelationColumnDelete':
+          result = await this.xcRelationColumnDelete(args, req);
           break;
 
         case 'xcVirtualRelationDelete':
@@ -1850,6 +1832,42 @@ export default class NcMetaMgr {
     }, {
       title: args.args.tn
     });
+  }
+
+  protected async xcUpdateVirtualKeyAlias(args): Promise<any> {
+    const dbAlias = await this.getDbAlias(args);
+    const model = await this.xcMeta.metaGet(args.project_id, dbAlias, 'nc_models', {
+      title: args.args.tn
+    });
+    const meta = JSON.parse(model.meta);
+    const vColumn = meta.v.find(v => v._cn === args.args.oldAlias);
+    if (!vColumn) {
+      return
+    }
+    vColumn._cn = args.args.newAlias;
+
+
+    const queryParams = JSON.parse(model.query_params);
+    if (queryParams?.showFields && args.args.oldAlias in queryParams.showFields) {
+      queryParams.showFields[args.args.newAlias] = queryParams.showFields[args.args.oldAlias];
+    }
+    if (queryParams?.columnsWidth && args.args.oldAlias in queryParams.columnsWidth) {
+      queryParams.columnsWidth[args.args.newAlias] = queryParams.columnsWidth[args.args.oldAlias];
+    }
+
+    if (queryParams?.fieldsOrder) {
+      queryParams.fieldsOrder.map(v => v === args.args.oldAlias ? args.args.newAlias : v)
+    }
+
+
+    await this.xcMeta.metaUpdate(args.project_id, dbAlias, 'nc_models', {
+      meta: JSON.stringify(meta),
+      query_params: JSON.stringify(queryParams),
+    }, {
+      title: args.args.tn
+    });
+
+    this.cacheModelDel(args.project_id, dbAlias, 'table', args.args.tn);
   }
 
   // NOTE: updated
@@ -2280,6 +2298,319 @@ export default class NcMetaMgr {
     return res;
   }
 
+
+  protected async xcM2MRelationCreate(args: any, req): Promise<any> {
+    const dbAlias = this.getDbAlias(args);
+    const projectId = this.getProjectId(args);
+
+    try {
+
+      const parent = await this.xcMeta.metaGet(projectId, dbAlias, 'nc_models', {
+        title: args.args.parentTable
+      });
+      const child = await this.xcMeta.metaGet(projectId, dbAlias, 'nc_models', {
+        title: args.args.childTable
+      });
+      const parentMeta = JSON.parse(parent.meta);
+      const childMeta = JSON.parse(child.meta);
+
+
+      const parentPK = parentMeta.columns.find(c => c.pk);
+      const childPK = childMeta.columns.find(c => c.pk);
+
+      const associateTableCols = [];
+
+      associateTableCols.push({
+        cn: `${childMeta.tn}_c_id`,
+        _cn: `${childMeta._tn}CId`,
+        rqd: true,
+        pk: true,
+        ai: false,
+        cdf: null,
+        dt: childPK.dt,
+        dtxp: childPK.dtxp,
+        dtxs: childPK.dtxs,
+        un: childPK.un,
+        altered: 1
+      }, {
+        cn: `${parentMeta.tn}_p_id`,
+        _cn: `${parentMeta._tn}PId`,
+        rqd: true,
+        pk: true,
+        ai: false,
+        cdf: null,
+        dt: parentPK.dt,
+        dtxp: parentPK.dtxp,
+        dtxs: parentPK.dtxs,
+        un: parentPK.un,
+        altered: 1
+      });
+
+      // todo: associative table naming
+      const aTn = `${this.projectConfigs[projectId]?.prefix ?? ''}_nc_m2m_${parentMeta.tn}_${childMeta.tn}`;
+      const aTnAlias = `m2m${parentMeta._tn}_${childMeta._tn}`;
+
+      const out = await this.projectMgr.getSqlMgr({id: projectId}).handleRequest('tableCreate', {
+        ...args,
+        args: {
+          tn: aTn,
+          _tn: aTnAlias,
+          columns: associateTableCols
+        }
+      });
+
+      if (this.listener) {
+        await this.listener({
+          req: {
+            ...args,
+            args: {
+              tn: aTn,
+              _tn: aTnAlias,
+              columns: associateTableCols
+            }, api: 'tableCreate'
+          },
+          res: out,
+          user: req.user,
+          ctx: {
+            req
+          }
+        });
+      }
+
+
+      const rel1Args = {
+        ...args.args,
+        childTable: aTn,
+        childColumn: `${parentMeta.tn}_p_id`,
+        parentTable: parentMeta.tn,
+        parentColumn: parentPK.cn,
+        type: 'real'
+      };
+      const rel2Args = {
+        ...args.args,
+        childTable: aTn,
+        childColumn: `${childMeta.tn}_c_id`,
+        parentTable: childMeta.tn,
+        parentColumn: childPK.cn,
+        type: 'real'
+      };
+      if (args.args.type === 'real') {
+        const outrel = await this.projectMgr.getSqlMgr({id: projectId}).handleRequest('relationCreate', {
+          ...args,
+          args: rel1Args
+        });
+        if (this.listener) {
+          await this.listener({
+            req: {
+              ...args,
+              args: rel1Args,
+              api: 'relationCreate'
+            },
+            res: outrel,
+            user: req.user,
+            ctx: {
+              req
+            }
+          });
+        }
+        const outrel1 = await this.projectMgr.getSqlMgr({id: projectId}).handleRequest('relationCreate', {
+          ...args,
+          args: rel2Args
+        });
+        if (this.listener) {
+          await this.listener({
+            req: {
+              ...args,
+              args: rel2Args,
+              api: 'relationCreate'
+            },
+            res: outrel1,
+            user: req.user,
+            ctx: {
+              req
+            }
+          });
+        }
+      } else {
+        const outrel = await this.xcVirtualRelationCreate({...args, args: rel1Args}, req);
+        if (this.listener) {
+          await this.listener({
+            req: {
+              ...args,
+              args: rel1Args,
+              api: 'xcVirtualRelationCreate'
+            },
+            res: outrel,
+            user: req.user,
+            ctx: {
+              req
+            }
+          });
+        }
+        const outrel1 = await this.xcVirtualRelationCreate({...args, args: rel2Args}, req);
+        await this.listener({
+          req: {
+            ...args,
+            args: rel2Args,
+            api: 'xcVirtualRelationCreate'
+          },
+          res: outrel1,
+          user: req.user,
+          ctx: {
+            req
+          }
+        });
+      }
+
+    } catch (e) {
+      console.log(e.message)
+    }
+
+
+  }
+
+
+  // todo : transaction in sql client
+  protected async xcRelationColumnDelete(args: any, req, deleteColumn = true): Promise<any> {
+    // this.xcMeta.startTransaction();
+    // try {
+    const dbAlias = this.getDbAlias(args);
+    const projectId = this.getProjectId(args);
+
+    // const parent = await this.xcMeta.metaGet(projectId, dbAlias, 'nc_models', {
+    //   title: args.args.parentTable
+    // });
+    // // @ts-ignore
+    // const parentMeta = JSON.parse(parent.meta);
+    // @ts-ignore
+    // todo: compare column
+    switch (args.args.type) {
+      case 'bt':
+      case 'hm': {
+        const child = await this.xcMeta.metaGet(projectId, dbAlias, 'nc_models', {
+          title: args.args.childTable
+        });
+        const childMeta = JSON.parse(child.meta);
+        const relation = childMeta.belongsTo.find(bt => bt.rtn === args.args.parentTable);
+        // todo: virtual relation delete
+        if (relation) {
+          const opArgs = {
+            ...args,
+            args: {
+              childColumn: relation.cn,
+              childTable: relation.tn,
+              parentTable: relation.rtn,
+              parentColumn: relation.rcn
+            },
+            api: 'relationDelete',
+            sqlOpPlus: true,
+          };
+          let out;
+          if (relation?.type === 'virtual') {
+            opArgs.api = 'xcVirtualRelationDelete';
+            out = await this.xcVirtualRelationDelete(opArgs, req);
+          } else {
+            out = await this.projectMgr.getSqlMgr({id: projectId}).handleRequest('relationDelete', opArgs);
+          }
+          if (this.listener) {
+            await this.listener({
+              req: opArgs,
+              res: out,
+              user: req.user,
+              ctx: {req}
+            });
+          }
+        }
+        if (deleteColumn) {
+          const originalColumns = childMeta.columns;
+          const columns = childMeta.columns.map(c => ({
+            ...c, ...(relation.cn === c.cn ? {
+              altered: 4,
+              cno: c.cn
+            } : {cno: c.cn})
+          }))
+
+          const opArgs = {
+            ...args,
+            args: {
+              columns,
+              originalColumns,
+              tn: childMeta.tn,
+            },
+            sqlOpPlus: true,
+            api: 'tableUpdate'
+          }
+          const out = await this.projectMgr.getSqlMgr({id: projectId}).handleRequest('tableUpdate', opArgs);
+
+          if (this.listener) {
+            await this.listener({
+              req: opArgs,
+              res: out,
+              user: req.user,
+              ctx: {req}
+            });
+          }
+        }
+      }
+        break;
+      case 'mm': {
+        const assoc = await this.xcMeta.metaGet(projectId, dbAlias, 'nc_models', {
+          title: args.args.assocTable
+        });
+        const assocMeta = JSON.parse(assoc.meta);
+        const rel1 = assocMeta.belongsTo.find(bt => bt.rtn === args.args.parentTable)
+        const rel2 = assocMeta.belongsTo.find(bt => bt.rtn === args.args.childTable)
+        await this.xcRelationColumnDelete({
+          ...args,
+          args: {
+            parentTable: rel1.rtn,
+            parentColumn: rel1.rcn,
+            childTable: rel1.tn,
+            childColumn: rel1.cn,
+            type: 'bt',
+          }
+        }, req, false)
+        await this.xcRelationColumnDelete({
+          ...args,
+          args: {
+            parentTable: rel2.rtn,
+            parentColumn: rel2.rcn,
+            childTable: rel2.tn,
+            childColumn: rel2.cn,
+            type: 'bt',
+          }
+        }, req, false);
+
+
+        const opArgs = {
+          ...args,
+          args: assocMeta,
+          api: 'tableDelete',
+          sqlOpPlus: true,
+        };
+        const out = await this.projectMgr.getSqlMgr({id: projectId}).handleRequest('tableDelete', opArgs);
+
+        if (this.listener) {
+          await this.listener({
+            req: opArgs,
+            res: out,
+            user: req.user,
+            ctx: {req}
+          });
+        }
+
+      }
+        break;
+    }
+    //   this.xcMeta.commit()
+    // } catch (e) {
+    //   this.xcMeta.rollback(e)
+    //   throw e;
+    // }
+
+
+  }
+
   protected async xcVirtualRelationDelete(args: any, req): Promise<any> {
     const dbAlias = this.getDbAlias(args);
     const projectId = this.getProjectId(args);
@@ -2608,7 +2939,8 @@ export default class NcMetaMgr {
         case 'table': {
           let tables = await this.xcMeta.metaList(this.getProjectId(args), this.getDbAlias(args), 'nc_models', {
             condition: {
-              type: 'table'
+              type: 'table',
+              mm: null
             }
           });
 
@@ -2721,7 +3053,7 @@ export default class NcMetaMgr {
           return Object.values(result);
         }
           break;
-        case 'relation':
+        case 'relation': {
 
           const relations = await this.xcRelationsGet(args);
 
@@ -2758,6 +3090,7 @@ export default class NcMetaMgr {
             }
           }
           return Object.values(result);
+        }
           break;
       }
     } catch (e) {
@@ -2857,17 +3190,14 @@ export default class NcMetaMgr {
   protected async xcPluginTest(req, args): Promise<any> {
     try {
       switch (args.args.category) {
-        // case 'Storage':
-        //   const storageIns = StorageFactory.createNewInstance(args.args, args.args.input);
-        //   await storageIns.init();
-        //   await storageIns?.test();
-        //   break;
-        case 'Email':
+        case 'Email': {
           const emailIns = EmailFactory.createNewInstance(args.args, args.args.input)
           await emailIns.init();
           await emailIns?.test(req.user?.email)
+        }
           break;
         default:
+          return this.pluginMgr.test(args.args)
           break;
       }
       return true;
@@ -3075,7 +3405,9 @@ export default class NcMetaMgr {
 
   protected async xcApiTokenDelete(args): Promise<any> {
     Tele.emit('evt', {evt_type: 'apiToken:deleted'});
-    return this.xcMeta.metaDelete(null, null, 'nc_api_tokens', args.args.id);
+    const res = await this.xcMeta.metaDelete(null, null, 'nc_api_tokens', args.args.id);
+    await RestAuthCtrl.instance.loadLatestApiTokens();
+    return res;
   }
 
 
@@ -3105,6 +3437,21 @@ export default class NcMetaMgr {
     }, args.args.id);
   }
 
+
+  protected async ncProjectInfo(args) {
+
+    const config = this.projectConfigs[this.getProjectId(args)];
+    return {
+      Node: process.version,
+      Arch: process.arch,
+      Platform: process.platform,
+      Docker: isDocker(),
+      Database: config.envs?.[process.env.NODE_ENV || 'dev']?.db?.[0]?.client,
+      'ProjectOnRootDB': !!config?.prefix,
+      'RootDB': this.config?.meta?.db?.client,
+      'PackageVersion': packageVersion
+    }
+  }
 
   protected async xcVirtualTableList(args): Promise<any> {
     return (await this.xcMeta.metaList(this.getProjectId(args), this.getDbAlias(args), 'nc_models', {
@@ -3201,6 +3548,46 @@ export default class NcMetaMgr {
 
   public get webhookNotificationAdapters() {
     return this.pluginMgr?.webhookNotificationAdapters;
+  }
+
+  private async xcRelease() {
+    const cachedResult = XcCache.get(NOCO_RELEASE);
+    if (cachedResult) {
+      return cachedResult;
+    }
+
+    const result: any = {
+      current: packageVersion,
+      isDocker: isDocker()
+    };
+    try {
+      const dockerTags = (await axios({
+        url: 'https://registry.hub.docker.com/v1/repositories/nocodb/nocodb/tags'
+      })).data;
+      const verPattern = /^(\d+)\.(\d+)\.(\d+)$/;
+      result.docker = dockerTags.sort((a, b): any => {
+        const m1: any = a.name.match(verPattern);
+        const m2: any = b.name.match(verPattern);
+        if (m1 && m2) {
+          return (m2[1] - m1[1]) || (m2[2] - m1[2]) || (m2[3] - m1[3]);
+        } else if (m1) {
+          return -Infinity
+        } else if (m2) {
+          return Infinity
+        }
+        return 0;
+      })?.[0];
+
+      if (result.docker && result.docker.name !== packageVersion) {
+        result.docker.upgrade = true;
+      }
+
+      XcCache.set(NOCO_RELEASE, result, 60 * 60 * 1000);
+    } catch (e) {
+      console.log(e);
+    }
+
+    return result;
   }
 
 }

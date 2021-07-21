@@ -1,34 +1,34 @@
-import passport from 'passport';
-import {Strategy, ExtractJwt} from 'passport-jwt';
-import * as jwt from 'jsonwebtoken';
-import {Knex} from '../../dataMapper';
 import {promisify} from 'util';
-import bcrypt from 'bcryptjs';
-import {DbConfig, NcConfig} from "../../../interface/config";
-import validator from "validator";
-import {Tele} from 'nc-help';
 
-const {v4: uuidv4} = require('uuid');
-const PassportLocalStrategy = require('passport-local').Strategy;
+import bcrypt from 'bcryptjs';
+import * as ejs from 'ejs';
+import * as jwt from 'jsonwebtoken';
+import {Tele} from 'nc-help';
+import passport from 'passport';
+import {Strategy as AuthTokenStrategy} from 'passport-auth-token';
+import {Strategy as GithubStrategy} from 'passport-github'
+import {Strategy as GoogleStrategy} from 'passport-google-oauth20';
+import {ExtractJwt, Strategy} from 'passport-jwt';
+import validator from "validator";
+
+import {DbConfig, NcConfig} from "../../../interface/config";
+import {Knex} from '../../dataMapper';
+import Noco from "../Noco";
+
 const autoBind = require('auto-bind');
+const PassportLocalStrategy = require('passport-local').Strategy;
+const {v4: uuidv4} = require('uuid');
 
 import * as crypto from "crypto";
-import * as ejs from 'ejs';
 
-import Noco from "../Noco";
 import NcMetaIO from "../meta/NcMetaIO";
 
 const {isEmail} = require('validator');
+
 import axios from 'axios';
 
-
-import {Strategy as GoogleStrategy} from 'passport-google-oauth20';
-import {Strategy as GithubStrategy} from 'passport-github'
-import {Strategy as AuthTokenStrategy} from 'passport-auth-token';
-// import {Strategy as AzureAdOAuth2Strategy} from 'passport-azure-ad-oauth2';
 import IEmailAdapter from "../../../interface/IEmailAdapter";
 import XcCache from "../plugins/adapters/cache/XcCache";
-// import {Router} from "express";
 
 passport.serializeUser(function ({id, email, email_verified, roles, provider, firstname, lastname, isAuthorized}, done) {
   done(null, {
@@ -84,7 +84,7 @@ export default class RestAuthCtrl {
     autoBind(this);
     // todo: default secret generation
     this.config.auth.jwt.secret = this.config?.auth?.jwt?.secret ?? 'secret';
-    this.jwtOptions = {secretOrKey: this.config.auth.jwt.secret}
+    this.jwtOptions = {secretOrKey: this.config.auth.jwt.secret, expiresIn: process.env.NC_JWT_EXPIRES_IN ?? '10h'}
     this.jwtOptions.jwtFromRequest = ExtractJwt.fromHeader('xc-auth');
     if (this.config?.auth?.jwt?.options) {
       Object.assign(this.jwtOptions, this.config?.auth?.jwt?.options);
@@ -541,12 +541,13 @@ export default class RestAuthCtrl {
 
         res.json({
           token: jwt.sign({
-            email: user.email,
-            firstname: user.firstname,
-            lastname: user.lastname,
-            id: user.id,
-            roles: user.roles
-          }, this.config.auth.jwt.secret, this.config.auth.jwt.options)
+              email: user.email,
+              firstname: user.firstname,
+              lastname: user.lastname,
+              id: user.id,
+              roles: user.roles
+            }, this.config.auth.jwt.secret,
+            this.config.auth.jwt.options)
         } as any);
       } catch (e) {
         console.log(e);
@@ -1002,7 +1003,7 @@ export default class RestAuthCtrl {
     }
 
     const invite_token = uuidv4();
-
+    let count;
     const user = await this.users.where({email}).first();
     if (user) {
       if (!await this.xcMeta.isUserHaveAccessToProject(req.body.project_id, user.id)) {
@@ -1015,6 +1016,7 @@ export default class RestAuthCtrl {
           invite_token_expires: new Date(Date.now() + (24 * 60 * 60 * 1000)),
           email
         });
+        count = await this.users.count('id').first();
 
         const {id} = await this.users.where({email}).first();
         await this.xcMeta.projectAddUser(req.body.project_id, id, 'creator');
@@ -1028,7 +1030,7 @@ export default class RestAuthCtrl {
     }
 
 
-    Tele.emit('evt', {evt_type: 'project:invite'})
+    Tele.emit('evt', {evt_type: 'project:invite', count:count?.count})
     this.xcMeta.audit(req.body.project_id, null, 'nc_audit', {
       op_type: 'AUTHENTICATION',
       op_sub_type: 'INVITE',
@@ -1168,6 +1170,7 @@ export default class RestAuthCtrl {
         return next(new Error(`User with id '${req.params.id}' not found`));
       }
 
+      req.body.roles = user.roles;
       const invite_token = uuidv4();
 
       await this.users.update({
@@ -1197,13 +1200,13 @@ export default class RestAuthCtrl {
       const template = (await import('./ui/emailTemplates/invite')).default;
 
       if (this.emailClient) {
-
         await this.emailClient.mailSend({
           to: email,
           subject: "Verify email",
           html: ejs.render(template, {
             signupLink: `${req.ncSiteUrl}${this.config?.dashboardPath}#/user/authentication/signup/${token}`,
-            projectName: req.body.projectName,
+            projectName: req.body?.projectName,
+            roles: (req.body?.roles || '').split(',').map(r => r.replace(/^./, m => m.toUpperCase())).join(', '),
             adminEmail: req.session?.passport?.user?.email
           })
         })

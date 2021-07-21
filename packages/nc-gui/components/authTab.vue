@@ -1,58 +1,65 @@
 <template>
   <div class="h-100">
-
     <div class="h-100" style="width: 100%">
-
       <v-tabs height="30" color="x-active">
-        <v-tab><span class="caption text-capitalize">Users Management</span></v-tab>
+        <v-tab>
+          <span class="caption text-capitalize">
+            <!-- Users Management -->
+            {{ $t('management.tabs.user') }}
+          </span>
+        </v-tab>
         <v-tab-item class="h-100">
-          <user-management :nodes="nodes"></user-management>
+          <user-management :nodes="nodes" />
         </v-tab-item>
 
         <template v-if="_isUIAllowed('apiTokenTab')">
-          <v-tab><span class="caption text-capitalize">API Tokens Management</span></v-tab>
+          <v-tab>
+            <span class="caption text-capitalize">
+              <!-- API Tokens Management -->
+              {{ $t('management.tabs.api') }}
+            </span>
+          </v-tab>
           <v-tab-item>
-            <api-tokens :nodes="nodes"></api-tokens>
+            <api-tokens :nodes="nodes" />
           </v-tab-item>
         </template>
-        <v-tab><span class="caption text-capitalize">Roles Management</span></v-tab>
+        <v-tab>
+          <span class="caption text-capitalize">
+            <!-- Roles Management -->
+            {{ $t('management.tabs.roles') }}
+          </span>
+        </v-tab>
         <v-tab-item>
-          <roles :nodes="nodes"></roles>
+          <roles :nodes="nodes" />
         </v-tab-item>
-<!--              <v-tab><span class="caption text-capitalize">Auth Management</span></v-tab>
+        <!--              <v-tab><span class="caption text-capitalize">Auth Management</span></v-tab>
               <v-tab-item>
                 <auth-hooks :nodes="nodes"></auth-hooks>
               </v-tab-item>-->
-
       </v-tabs>
     </div>
-
   </div>
 </template>
 
 <script>
-import DlgLabelSubmitCancel from "@/components/utils/dlgLabelSubmitCancel";
-import UserManagement from "@/components/auth/userManagement";
-import Roles from "@/components/auth/roles";
-import AuthHooks from "@/components/auth/authHooks";
-import ApiTokens from "@/components/auth/apiTokens";
+import UserManagement from '@/components/auth/userManagement'
+import Roles from '@/components/auth/roles'
+import ApiTokens from '@/components/auth/apiTokens'
 
 export default {
-  components: {ApiTokens, AuthHooks, Roles, UserManagement, DlgLabelSubmitCancel},
+  name: 'AuthTab',
+  components: { ApiTokens, Roles, UserManagement },
   props: ['nodes'],
-  name: "auth-tab",
   data: () => ({
-    showConfirmDlg: false,
+    showConfirmDlg: false
   }),
-  async created() {
-  },
+  async created() {},
   methods: {}
 }
 </script>
 
 <style scoped lang="scss">
 ::v-deep {
-
   //.v-tabs-bar {
   //  border-bottom: solid 1px var(--v-primary-lighten2);
   //}
@@ -72,7 +79,6 @@ export default {
       }
     }
   }
-
 }
 </style>
 <!--
@@ -81,6 +87,7 @@ export default {
  *
  * @author Naveen MR <oof1lab@gmail.com>
  * @author Pranav C Balan <pranavxc@gmail.com>
+ * @author Wing-Kam Wong <wingkwong.code@gmail.com>
  *
  * @license GNU AGPL version 3 or any later version
  *

@@ -1,6 +1,6 @@
-import BaseRender from "../../BaseRender";
+import BaseModelXcMeta from "./BaseModelXcMeta";
 
-class ModelXcMetaPg extends BaseRender {
+class ModelXcMetaPg extends BaseModelXcMeta {
 
   /**
    * @param dir
@@ -770,9 +770,6 @@ class ModelXcMetaPg extends BaseRender {
       case "set":
         str += `"SET(${column.dtxp})"`;
         break;
-      case "time":
-        str += `DataTypes.TIME`;
-        break;
       case "geometry":
         str += `DataTypes.GEOMETRY`;
         break;
@@ -934,9 +931,9 @@ class ModelXcMetaPg extends BaseRender {
 
   getXcColumnsObject(args) {
 
-    let columnsArr = [];
+    const columnsArr = [];
 
-    for (let column of args.columns) {
+    for (const column of args.columns) {
       const columnObj = {
         validate: {
           func: [],
@@ -984,10 +981,12 @@ class ModelXcMetaPg extends BaseRender {
 
       columnsArr.push(columnObj)
     }
+
+    this.mapDefaultPrimaryValue(columnsArr);
     return columnsArr;
   }
 
-  getObject() {
+/*  getObject() {
     return {
       tn: this.ctx.tn,
       _tn: this.ctx._tn,
@@ -999,7 +998,7 @@ class ModelXcMetaPg extends BaseRender {
       type: this.ctx.type,
     }
 
-  }
+  }*/
 
 }
 

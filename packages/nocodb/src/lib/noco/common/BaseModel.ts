@@ -1,9 +1,11 @@
-import {BaseModelSql} from "../../dataMapper";
-// import axios from "axios";
-import BaseApiBuilder from "./BaseApiBuilder";
-import IEmailAdapter from "../../../interface/IEmailAdapter";
 import Handlebars from "handlebars";
 import {IWebhookNotificationAdapter} from "nc-plugin";
+
+import IEmailAdapter from "../../../interface/IEmailAdapter";
+import {BaseModelSql} from "../../dataMapper";
+
+// import axios from "axios";
+import BaseApiBuilder from "./BaseApiBuilder";
 
 class BaseModel<T extends BaseApiBuilder<any>> extends BaseModelSql {
 
@@ -102,7 +104,7 @@ class BaseModel<T extends BaseApiBuilder<any>> extends BaseModelSql {
               })
               break;
             case 'URL':
-              this.handleHttpWebHook(hook.notification?.payload)
+              this.handleHttpWebHook(hook.notification?.payload, req, data)
               break;
             default:
               if (this.webhookNotificationAdapters && hook.notification?.type && hook.notification?.type in this.webhookNotificationAdapters) {
@@ -121,27 +123,33 @@ class BaseModel<T extends BaseApiBuilder<any>> extends BaseModelSql {
     }
   }
 
-  private async handleHttpWebHook(apiMeta) {
+  private async handleHttpWebHook(apiMeta, apiReq, data) {
     try {
-      const req = this.axiosRequestMake(apiMeta);
+      const req = this.axiosRequestMake(apiMeta, apiReq, data);
       await require('axios')(req);
     } catch (e) {
       console.log(e)
     }
   }
 
-  private axiosRequestMake(apiMeta) {
+  private axiosRequestMake(apiMeta, apiReq, data) {
     if (apiMeta.body) {
       try {
-        apiMeta.body = JSON.parse(apiMeta.body);
+        apiMeta.body = JSON.parse(apiMeta.body, (_key, value) => {
+          return typeof value === 'string' ? this.parseBody(value, apiReq, data, apiMeta) : value;
+        });
       } catch (e) {
+        apiMeta.body = this.parseBody(apiMeta.body, apiReq, data, apiMeta)
         console.log(e);
       }
     }
     if (apiMeta.auth) {
       try {
-        apiMeta.auth = JSON.parse(apiMeta.auth);
+        apiMeta.auth = JSON.parse(apiMeta.auth, (_key, value) => {
+          return typeof value === 'string' ? this.parseBody(value, apiReq, data, apiMeta) : value;
+        });
       } catch (e) {
+        apiMeta.auth = this.parseBody(apiMeta.auth, apiReq, data, apiMeta)
         console.log(e);
       }
     }
@@ -149,16 +157,16 @@ class BaseModel<T extends BaseApiBuilder<any>> extends BaseModelSql {
     const req = {
       params: apiMeta.parameters ? apiMeta.parameters.reduce((paramsObj, param) => {
         if (param.name && param.enabled) {
-          paramsObj[param.name] = param.value;
+          paramsObj[param.name] = this.parseBody(param.value, apiReq, data, apiMeta);
         }
         return paramsObj;
       }, {}) : {},
-      url: apiMeta.path,
+      url: this.parseBody(apiMeta.path, apiReq, data, apiMeta),
       method: apiMeta.method,
       data: apiMeta.body,
       headers: apiMeta.headers ? apiMeta.headers.reduce((headersObj, header) => {
         if (header.name && header.enabled) {
-          headersObj[header.name] = header.value;
+          headersObj[header.name] = this.parseBody(header.value, apiReq, data, apiMeta);
         }
         return headersObj;
       }, {}) : {},
@@ -186,31 +194,32 @@ class BaseModel<T extends BaseApiBuilder<any>> extends BaseModelSql {
 
     const isValid = condition.reduce((valid, con) => {
       let res;
+      const field = this.columnToAlias[con.field] ?? con.field;
       switch (con.op as string) {
         case 'is equal':
-          res = data[con.field] === con.value;
+          res = data[field] === con.value;
           break;
         case 'is not equal':
-          res = data[con.field] !== con.value;
+          res = data[field] !== con.value;
           break;
         case 'is like':
-          res = data[con.field]?.toLowerCase()?.indexOf(con.value?.toLowerCase()) > -1;
+          res = data[field]?.toLowerCase()?.indexOf(con.value?.toLowerCase()) > -1;
           break;
         case 'is not like':
-          res = data[con.field]?.toLowerCase()?.indexOf(con.value?.toLowerCase()) === -1;
+          res = data[field]?.toLowerCase()?.indexOf(con.value?.toLowerCase()) === -1;
           break;
         case 'is empty':
-          res = data[con.field] === '' || data[con.field] === null || data[con.field] === undefined;
+          res = data[field] === '' || data[field] === null || data[field] === undefined;
           break;
         case 'is not empty':
-          res = !(data[con.field] === '' || data[con.field] === null || data[con.field] === undefined);
+          res = !(data[field] === '' || data[field] === null || data[field] === undefined);
           break;
         case 'is null':
           res =
-            res = data[con.field] === null;
+            res = data[field] === null;
           break;
         case 'is not null':
-          res = data[con.field] !== null;
+          res = data[field] !== null;
           break;
 
 
@@ -242,7 +251,8 @@ class BaseModel<T extends BaseApiBuilder<any>> extends BaseModelSql {
     return Handlebars.compile(template, {noEscape: true})({
       data,
       user: req?.user,
-      payload
+      payload,
+      env: process.env
     })
   }
 }

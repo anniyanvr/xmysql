@@ -1,26 +1,28 @@
-import {
-  // ModelXcMetaFactory,
-  MysqlClient, PgClient, SqlClient,
-  // ExpressXcPolicy,
-  SqlClientFactory} from 'nc-help';
-import Noco from "../Noco";
-import {Acls, DbConfig, NcConfig} from "../../../interface/config";
-import XcDynamicChanges from "../../../interface/XcDynamicChanges";
-import {BaseModelSql, XKnex} from "../../dataMapper";
-import inflection from "inflection";
-import BaseModel from "./BaseModel";
-import {XcCron} from "./XcCron";
-import {Router} from "express";
-import NcMetaIO from "../meta/NcMetaIO";
+import * as fs from "fs";
 
 import debug from 'debug';
+import {Router} from "express";
+import inflection from "inflection";
 import Knex from "knex";
-import NcHelp from "../../utils/NcHelp";
-import * as fs from "fs";
-import NcProjectBuilder from "../NcProjectBuilder";
-import XcCache from "../plugins/adapters/cache/XcCache";
+import {
+  MysqlClient, PgClient, SqlClient,
+  SqlClientFactory,
+  Tele
+} from 'nc-help';
+
+import XcDynamicChanges from "../../../interface/XcDynamicChanges";
+import {Acls, DbConfig, NcConfig} from "../../../interface/config";
+import {BaseModelSql, XKnex} from "../../dataMapper";
 import ModelXcMetaFactory from "../../sqlMgr/code/models/xc/ModelXcMetaFactory";
 import ExpressXcPolicy from '../../sqlMgr/code/policies/xc/ExpressXcPolicy';
+import NcHelp from "../../utils/NcHelp";
+import NcProjectBuilder from "../NcProjectBuilder";
+import Noco from "../Noco";
+import NcMetaIO from "../meta/NcMetaIO";
+import XcCache from "../plugins/adapters/cache/XcCache";
+
+import BaseModel from "./BaseModel";
+import {XcCron} from "./XcCron";
 
 const log = debug('nc:api:base');
 
@@ -53,6 +55,8 @@ const IGNORE_TABLES = [
 
 
 export default abstract class BaseApiBuilder<T extends Noco> implements XcDynamicChanges {
+  public abstract readonly type: string;
+
   public get knex(): XKnex {
     return this.sqlClient?.knex || this.dbDriver;
   }
@@ -91,6 +95,10 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
 
   public get xcModels() {
     return this.models;
+  }
+
+  public get client() {
+    return this.connectionConfig?.client;
   }
 
   public readonly app: T;
@@ -160,8 +168,6 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
     return this.sqlClient;
   }
 
-  public abstract onTableCreate(tn: string, args?: any): Promise<void>  ;
-
   public abstract onViewCreate(viewName: string): Promise<void>  ;
 
   public abstract onFunctionCreate(functionName: string): Promise<void>  ;
@@ -203,6 +209,7 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
 
 
   public async onRelationCreate(tnp: string, tnc: string, args?: any): Promise<void> {
+
     const {
       childColumn,
       onDelete,
@@ -227,8 +234,19 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
         dr: onDelete,
         ur: onUpdate,
       })
+    } else {
+      await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_relations', {
+        _tn: this.getTableNameAlias(tnc),
+        _rtn: this.getTableNameAlias(tnp),
+      }, {
+        tn: tnc,
+        cn: childColumn,
+        rtn: tnp,
+        rcn: parentColumn,
+      })
     }
 
+    Tele.emit('evt', {evt_type: 'relation:created'})
   }
 
   public async onRelationDelete(tnp: string, tnc: string, args: any): Promise<void> {
@@ -304,13 +322,11 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
     const metaObj = JSON.parse(modelRow.meta);
     this.metas[tn] = metaObj;
     this.baseLog(`onValidationUpdate : Generating model instance for '%s' table`, tn)
-    this.models[modelRow.title] = new BaseModelSql({
-      dbDriver: this.dbDriver,
-      ...metaObj
-    });
+    this.models[modelRow.title] = this.getBaseModel(metaObj);
 
     // todo: check tableAlias changed or not
-    await this.onTableRename(tn, tn)
+    // todo:
+    // await this.onTableRename(tn, tn)
   }
 
 
@@ -319,9 +335,19 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
     this.baseLog(`onTableUpdate : '%s'`, tn);
     this.baseLog(`onTableUpdate : Getting old model meta for '%s'`, tn)
     XcCache.del([this.projectId, this.dbAlias, 'table', tn].join('::'));
+
+    const relationTableMetas: Set<any> = new Set();
+
     const oldModelRow = await this.xcMeta.metaGet(this.projectId, this.dbAlias, 'nc_models', {
       title: tn
-    });
+    })
+
+    let queryParams;
+    try {
+      queryParams = JSON.parse(oldModelRow.query_params);
+    } catch (e) {
+    }
+
 
     if (!oldModelRow) {
       return;
@@ -358,16 +384,19 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
     this.baseLog(`onTableUpdate : Generating new model meta for '%s' table`, tn)
 
     /* create models from table */
-    const newMeta = ModelXcMetaFactory.create(this.connectionConfig, {dir: '', ctx, filename: ''}).getObject();
+    const newMeta: any = ModelXcMetaFactory.create(this.connectionConfig, {dir: '', ctx, filename: ''}).getObject();
 
 
     /* get ACL row  */
-    const aclRow = await this.xcMeta.metaGet(this.projectId, this.dbAlias, 'nc_acl', {
-      tn
-    });
+    const aclRow = await this.xcMeta.metaGet(this.projectId, this.dbAlias, 'nc_acl', {tn});
 
     const acl = JSON.parse(aclRow.acl);
     const oldMeta = JSON.parse(oldModelRow.meta);
+
+    // copy virtual columns and many to many relations from old meta to new
+    newMeta.v = oldMeta.v;
+    newMeta.manyToMany = oldMeta.manyToMany;
+
     const aclOper = [];
 
     this.baseLog(`onTableUpdate : Comparing and updating new metadata of '%s' table`, tn)
@@ -392,13 +421,16 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
           await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_relations', {
             cn: column.cn
           }, {
-            cn: column.cno
+            cn: column.cno,
+            tn
           })
           await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_relations', {
             rcn: column.cn
           }, {
-            rcn: column.cno
+            rcn: column.cno,
+            rtn: tn
           })
+
           aclOper.push(async () => this.modifyColumnNameInACL(tn, column.cno, column.cn));
 
           // virtual views param update
@@ -418,6 +450,45 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
             /* update filters */
             if (JSON.stringify(filters).includes(`"${column.cno}"`)) {
               filters.splice(0, filters.length);
+            }
+          }
+
+          // update relation column name in meta data
+          // update column name in belongs to
+          if (newMeta.belongsTo?.length) {
+            for (const bt of newMeta.belongsTo) {
+              if (bt.cn === column.cno) {
+                bt.cn = column.cn;
+                bt._cn = column._cn;
+
+                // update column name in parent table metadata
+                relationTableMetas.add(this.metas[bt.rtn])
+                for (const pHm of this.metas[bt.rtn]?.hasMany) {
+                  if (pHm.cn === column.cno && pHm.tn === tn) {
+                    pHm.cn = column.cn;
+                    pHm._cn = column._cn;
+                  }
+                }
+              }
+            }
+          }
+
+          // update column name in has many
+          if (newMeta.hasMany?.length) {
+            for (const hm of newMeta.hasMany) {
+              if (hm.rcn === column.cno) {
+                hm.rcn = column.cn;
+                hm._rcn = column._cn;
+
+                // update column name in child table metadata
+                relationTableMetas.add(this.metas[hm.tn])
+                for (const cBt of this.metas[hm.tn]?.belongsTo) {
+                  if (cBt.rcn === column.cno && cBt.rtn === tn) {
+                    cBt.rcn = column.cn;
+                    cBt._rcn = column._cn;
+                  }
+                }
+              }
             }
           }
         }
@@ -468,8 +539,6 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
             filters.splice(0, filters.length);
           }
         }
-
-
       } else if (column.altered === 1) {
         // handle new col -- no change
         for (const permObj of Object.values(acl)) {
@@ -480,6 +549,12 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
             aclObj.columns[column.cn] = true;
           }
         }
+
+        if (queryParams?.showFields) {
+          queryParams.showFields[column.cno] = true;
+        }
+
+
       } else {
         oldCol = oldMeta.columns.find(c => c.cn === column.cn);
         newCol = newMeta.columns.find(c => c.cn === column.cn);
@@ -496,7 +571,8 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
     }
 
     await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_models', {
-      meta: JSON.stringify(newMeta)
+      meta: JSON.stringify(newMeta),
+      ...(queryParams ? {query_params: JSON.stringify(queryParams)} : {})
     }, {
       title: tn
     });
@@ -517,19 +593,24 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
     }
     this.baseLog(`onTableUpdate : Generating model instance for '%s' table`, tn)
 
-    this.models[tn] = new BaseModelSql({
-      dbDriver: this.dbDriver,
-      ...newMeta
-    });
+    this.models[tn] = this.getBaseModel(newMeta);
 
 
     await NcHelp.executeOperations(aclOper, this.connectionConfig.client);
+
+    // update relation tables metadata
+    for (const relMeta of relationTableMetas) {
+      await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_models', {
+        meta: JSON.stringify(relMeta)
+      }, {
+        title: relMeta.tn
+      });
+    }
   }
 
 
   public async onViewUpdate(viewName: string, beforeMetaUpdate?: (args: any) => Promise<void>): Promise<void> {
     this.baseLog(`onViewUpdate : '%s'`, viewName);
-
     this.baseLog(`onViewUpdate : Getting old model meta of '%s' view`, viewName)
 
     const oldModelRow = this.xcMeta.metaGet(this.projectId, this.dbAlias, 'nc_models', {
@@ -567,10 +648,7 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
     }
     this.baseLog(`onViewUpdate : Generating model instance for '%s' table`, viewName)
 
-    this.models[viewName] = new BaseModelSql({
-      dbDriver: this.dbDriver,
-      ...newMeta
-    });
+    this.models[viewName] = this.getBaseModel(newMeta);
 
 
   }
@@ -603,44 +681,59 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
 
 
     const NC_VERSIONS = [
-      // {name: '0.6', handler: null},
-      // {name: '0.7', handler: this.xcUpZeroPointSeven},
-      // {name: '0.8', handler: this.xcUpZeroPointEight},
-      // {name: '0.9', handler: this.xcUpZeroPointNine},
+      {name: '0009000', handler: null},
+      {name: '0009044', handler: this.ncUpManyToMany.bind(this)}
     ]
-    const knex = this.getDbDriver();
-    if (!await knex.schema.hasTable('nc_store')) {
+    if (!await this.xcMeta?.knex?.schema?.hasTable?.('nc_store')) {
       return;
     }
     this.baseLog(`xcUpgrade : Getting configuration from meta database`,)
 
-    const config = await knex('nc_store').where({key: 'NC_CONFIG'}).first();
+    const config = await this.xcMeta.metaGet(this.projectId, this.dbAlias, 'nc_store', {key: 'NC_CONFIG'});
+
     if (config) {
       const configObj: NcConfig = JSON.parse(config.value);
       if (configObj.version !== process.env.NC_VERSION) {
-        let start = false;
         for (const version of NC_VERSIONS) {
-          if (start) {
-            await version.handler()
-          } else if (version.name === configObj.version) {
-            start = true;
-            // todo: take backup of current version
+          // compare current version and old version
+          if (version.name > configObj.version) {
+            this.baseLog(`xcUpgrade : Upgrading '%s' => '%s'`, configObj.version, version.name)
+            await version?.handler?.();
+
+            // update version in meta after each upgrade
+            config.version = version.name;
+            await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_store', {
+              value: JSON.stringify(config)
+            }, {
+              key: 'NC_CONFIG',
+            });
+
+            // todo: backup data
+
           }
           if (version.name === process.env.NC_VERSION) {
             break;
-            // todo:
           }
         }
+        config.version = process.env.NC_VERSION;
+        await this.xcMeta.metaInsert(this.projectId, this.dbAlias, 'nc_store', {
+          key: 'NC_CONFIG',
+          value: JSON.stringify(config)
+        });
       }
     } else {
-
       this.baseLog(`xcUpgrade : Inserting config to meta database`,)
       const configObj: NcConfig = JSON.parse(JSON.stringify(this.config));
       delete configObj.envs;
+      const isOld = (await this.xcMeta.metaList(this.projectId, this.dbAlias, 'nc_models'))?.length;
+      configObj.version = isOld ? '0009000' : process.env.NC_VERSION;
       await this.xcMeta.metaInsert(this.projectId, this.dbAlias, 'nc_store', {
         key: 'NC_CONFIG',
         value: JSON.stringify(configObj)
       });
+      if (isOld) {
+        await this.xcUpgrade();
+      }
     }
   }
 
@@ -685,6 +778,55 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
     });
   }
 
+  public async onVirtualRelationCreate(parentTable: string, childTable: string): Promise<any> {
+    return this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_relations', {
+      _tn: this.getTableNameAlias(childTable),
+      _rtn: this.getTableNameAlias(parentTable),
+    }, {
+      tn: childTable,
+      rtn: parentTable,
+    });
+  }
+
+
+  public async onManyToManyRelationCreate(parent: string, child: string, _args?: any) {
+    return this.getManyToManyRelations({parent, child})
+  }
+
+  public async onManyToManyRelationDelete(parent: string, child: string, _args?: any) {
+
+    const parentMeta = this.metas[parent];
+    const childMeta = this.metas[child];
+
+    parentMeta.manyToMany = parentMeta.manyToMany.filter(mm => !(mm.tn === parent && mm.rtn === child || mm.tn === child && mm.rtn === parent))
+    childMeta.manyToMany = childMeta.manyToMany.filter(mm => !(mm.tn === parent && mm.rtn === child || mm.tn === child && mm.rtn === parent))
+
+    parentMeta.v = parentMeta.v.filter(({mm}) => !mm || !(mm.tn === parent && mm.rtn === child || mm.tn === child && mm.rtn === parent))
+    childMeta.v = childMeta.v.filter(({mm}) => !mm || !(mm.tn === parent && mm.rtn === child || mm.tn === child && mm.rtn === parent))
+
+    for (const meta of [parentMeta, childMeta]) {
+      await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_models', {
+        meta: JSON.stringify(meta)
+      }, {title: meta.tn})
+      XcCache.del([this.projectId, this.dbAlias, 'table', meta.tn].join('::'));
+      this.models[meta.tn] = this.getBaseModel(meta)
+    }
+  }
+
+  public getProjectId(): string {
+    return this.projectId;
+  }
+
+  public async init(): Promise<void> {
+    await this.xcUpgrade();
+  }
+
+  public async onVirtualColumnAliasUpdate(tableName: string): Promise<void> {
+    const model = await this.xcMeta.metaGet(this.projectId, this.dbAlias, 'nc_models', {title: tableName});
+    const meta = JSON.parse(model.meta);
+    this.models[tableName] = this.getBaseModel(meta);
+  }
+
 
   protected async loadCommon(): Promise<any> {
     this.baseLog(`loadCommon :`);
@@ -696,18 +838,22 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
 
   protected initDbDriver(): void {
     if (!this.dbDriver) {
-
-
       if (this.connectionConfig?.connection?.ssl && typeof this.connectionConfig?.connection?.ssl === 'object') {
-        this.connectionConfig.connection.ssl.ca = fs
-          .readFileSync(this.connectionConfig.connection.ssl.caFilePath)
-          .toString();
-        this.connectionConfig.connection.ssl.key = fs
-          .readFileSync(this.connectionConfig.connection.ssl.keyFilePath)
-          .toString();
-        this.connectionConfig.connection.ssl.cert = fs
-          .readFileSync(this.connectionConfig.connection.ssl.certFilePath)
-          .toString();
+        if (this.connectionConfig.connection.ssl.caFilePath) {
+          this.connectionConfig.connection.ssl.ca = fs
+            .readFileSync(this.connectionConfig.connection.ssl.caFilePath)
+            .toString();
+        }
+        if (this.connectionConfig.connection.ssl.keyFilePath) {
+          this.connectionConfig.connection.ssl.key = fs
+            .readFileSync(this.connectionConfig.connection.ssl.keyFilePath)
+            .toString();
+        }
+        if (this.connectionConfig.connection.ssl.certFilePath) {
+          this.connectionConfig.connection.ssl.cert = fs
+            .readFileSync(this.connectionConfig.connection.ssl.certFilePath)
+            .toString();
+        }
       }
 
       const isSqlite = this.connectionConfig.client === 'sqlite3';
@@ -752,7 +898,7 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
 
   protected async getColumnList(tn: string): Promise<any[]> {
     this.baseLog(`getColumnList : '%s'`, tn);
-    let columns = await this.sqlClient.columnList({tn: tn});
+    let columns = await this.sqlClient.columnList({tn});
     columns = columns.data.list;
     return columns;
   }
@@ -788,20 +934,22 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
   }
 
 
-  protected generateContextForTable(tn: string, columns: any[], relations, hasMany: any[], belongsTo: any[], type = 'table', table_name_alias?: string): any {
+  protected generateContextForTable(tn: string, columns: any[], relations, hasMany: any[], belongsTo: any[], type = 'table', tableNameAlias?: string): any {
     this.baseLog(`generateContextForTable : '%s' %s`, tn, type);
 
     for (const col of columns) {
-      col._cn = this.getColumnNameAlias(col);
+      col._cn = col._cn || this.getColumnNameAlias(col);
     }
 
-    const tableNameAlias = table_name_alias || this.getTableNameAlias(tn);
+    // tslint:disable-next-line:variable-name
+    const _tn = tableNameAlias || this.getTableNameAlias(tn)
+
     const ctx = {
       dbType: this.connectionConfig.client,
       tn,
-      _tn: tableNameAlias,
-      tn_camelize: inflection.camelize(tableNameAlias),
-      tn_camelize_low: inflection.camelize(tableNameAlias, true),
+      _tn,
+      tn_camelize: inflection.camelize(_tn),
+      tn_camelize_low: inflection.camelize(_tn, true),
       columns,
       relations,
       hasMany,
@@ -812,11 +960,6 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
       project_id: this.projectId
     };
     return ctx;
-  }
-
-
-  private getColumnNameAlias(col, tableName?: string) {
-    return this.metas?.[tableName]?.columns?.find(c => c.cn === col.cn)?._cn || col._cn || this.getInflectedName(col.cn, this.connectionConfig?.meta?.inflection?.cn);
   }
 
   protected getTableNameAlias(tn: string) {
@@ -833,7 +976,7 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
       ...ctx,
       _tn: this.metas[ctx.tn]._tn,
       _ctn: this.metas[tnc]._tn,
-      tnc: tnc,
+      ctn: tnc,
       project_id: this.projectId
     };
   }
@@ -889,6 +1032,7 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
 
   protected getBaseModel(meta): BaseModelSql {
     this.baseLog(`getBaseModel : '%s'`);
+    this.metas[meta.tn] = meta;
     return new BaseModel({
       dbDriver: this.dbDriver,
       ...meta,
@@ -1059,6 +1203,173 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
     await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_relations', {
       rtn: newTableName
     }, {rtn: oldTableName});
+  }
+
+
+  protected async getManyToManyRelations({parent = null, child = null, localMetas = null} = {}) {
+    const metas = new Set<any>();
+    const assocMetas = new Set<any>();
+
+    if (localMetas) {
+      for (const meta of localMetas) {
+        this.metas[meta.tn] = meta;
+      }
+    }
+
+    for (const meta of Object.values(this.metas)) {
+
+      // check if table is a Bridge table(or Associative Table) by checking
+      // number of foreign keys and columns
+      if (meta.belongsTo?.length === 2 && meta.columns.length < 5) {
+
+        if (parent && child && !([parent, child].includes(meta.belongsTo[0].rtn) && [parent, child].includes(meta.belongsTo[1].rtn))) {
+          continue;
+        }
+
+        const tableMetaA = this.metas[meta.belongsTo[0].rtn];
+        const tableMetaB = this.metas[meta.belongsTo[1].rtn];
+
+        /*        // remove hasmany relation with associate table from tables
+                tableMetaA.hasMany.splice(tableMetaA.hasMany.findIndex(hm => hm.tn === meta.tn), 1)
+                tableMetaB.hasMany.splice(tableMetaB.hasMany.findIndex(hm => hm.tn === meta.tn), 1)*/
+
+
+        // add manytomany data under metadata of both linked tables
+        tableMetaA.manyToMany = tableMetaA.manyToMany || [];
+        if (tableMetaA.manyToMany.every(mm => mm.vtn !== meta.tn)) {
+          tableMetaA.manyToMany.push({
+            "tn": tableMetaA.tn,
+            "cn": meta.belongsTo[0].rcn,
+            "vtn": meta.tn,
+            "vcn": meta.belongsTo[0].cn,
+            "vrcn": meta.belongsTo[1].cn,
+            "rtn": meta.belongsTo[1].rtn,
+            "rcn": meta.belongsTo[1].rcn,
+            "_tn": tableMetaA._tn,
+            "_cn": meta.belongsTo[0]._rcn,
+            "_rtn": meta.belongsTo[1]._rtn,
+            "_rcn": meta.belongsTo[1]._rcn
+          })
+          metas.add(tableMetaA)
+        }
+        // ignore if A & B are same table
+        if (tableMetaB !== tableMetaA) {
+          tableMetaB.manyToMany = tableMetaB.manyToMany || [];
+          if (tableMetaB.manyToMany.every(mm => mm.vtn !== meta.tn)) {
+            tableMetaB.manyToMany.push({
+              "tn": tableMetaB.tn,
+              "cn": meta.belongsTo[1].rcn,
+              "vtn": meta.tn,
+              "vcn": meta.belongsTo[1].cn,
+              "vrcn": meta.belongsTo[0].cn,
+              "rtn": meta.belongsTo[0].rtn,
+              "rcn": meta.belongsTo[0].rcn,
+              "_tn": tableMetaB._tn,
+              "_cn": meta.belongsTo[1]._rcn,
+              "_rtn": meta.belongsTo[0]._rtn,
+              "_rcn": meta.belongsTo[0]._rcn
+            })
+            metas.add(tableMetaB)
+          }
+        }
+        assocMetas.add(meta)
+      }
+    }
+
+    // Update metadata of tables which have manytomany relation
+    // and recreate basemodel with new meta information
+    for (const meta of metas) {
+
+      let queryParams;
+
+      // update showfields on new many to many relation create
+      if (parent && child) {
+        try {
+          queryParams = JSON.parse((await this.xcMeta.metaGet(this.projectId, this.dbAlias, 'nc_models', {title: meta.tn})).query_params)
+        } catch (e) {
+          //  ignore
+        }
+      }
+
+      meta.v = [
+        ...meta.v.filter(vc => !(vc.hm && meta.manyToMany.some(mm => vc.hm.tn === mm.vtn))),
+        // todo: ignore duplicate m2m relations
+        // todo: optimize, just compare associative table(Vtn)
+        ...meta.manyToMany.filter((v, i) => !meta.v.some(v1 => v1.mm
+          && (
+            v1.mm.tn === v.tn && v.rtn === v1.mm.rtn
+            || v1.mm.rtn === v.tn && v.tn === v1.mm.rtn
+          ) && v.vtn === v1.mm.vtn)
+          // ignore duplicate
+          && !meta.manyToMany.some((v1, i1) => i1 !== i && v1.tn === v.tn && v.rtn === v1.rtn && v.vtn === v1.vtn)
+        ).map(mm => {
+          if (queryParams?.showFields && !(`${mm._tn} <=> ${mm._rtn}` in queryParams.showFields)) {
+            queryParams.showFields[`${mm._tn} <=> ${mm._rtn}`] = true;
+          }
+
+          return {
+            mm,
+            _cn: `${mm._tn} <=> ${mm._rtn}`
+          }
+
+        })]
+      await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_models', {
+        meta: JSON.stringify(meta),
+        ...(queryParams ? {query_params: JSON.stringify(queryParams)} : {})
+      }, {title: meta.tn})
+      XcCache.del([this.projectId, this.dbAlias, 'table', meta.tn].join('::'));
+      if (!localMetas) {
+        this.models[meta.tn] = this.getBaseModel(meta)
+      }
+    }
+
+    // Update metadata of associative table
+    for (const meta of assocMetas) {
+      await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_models', {
+        mm: 1,
+      }, {title: meta.tn})
+      if (!localMetas) {
+        XcCache.del([this.projectId, this.dbAlias, 'table', meta.tn].join('::'));
+        this.models[meta.tn] = this.getBaseModel(meta)
+      }
+    }
+  }
+
+
+  protected async ncUpManyToMany(): Promise<any> {
+    const models = await this.xcMeta.metaList(this.projectId, this.dbAlias, 'nc_models', {
+      fields: ['meta'],
+      condition: {
+        type: 'table'
+      }
+    });
+    if (!models.length) {
+      return
+    }
+    const metas = [];
+    // add virtual columns for relations
+    for (const metaObj of models) {
+      const meta = JSON.parse(metaObj.meta);
+      metas.push(meta);
+      const ctx = this.generateContextForTable(meta.tn, meta.columns, [], meta.hasMany, meta.belongsTo, meta.type, meta._tn);
+      // generate virtual columns
+      meta.v = ModelXcMetaFactory.create(this.connectionConfig, {dir: '', ctx, filename: ''}).getVitualColumns();
+      // set default primary values
+      ModelXcMetaFactory.create(this.connectionConfig, {}).mapDefaultPrimaryValue(meta.columns);
+      // update meta
+      await this.xcMeta.metaUpdate(this.projectId, this.dbAlias, 'nc_models', {
+        meta: JSON.stringify(meta)
+      }, {title: meta.tn})
+    }
+
+    // generate many to many relations an columns
+    await this.getManyToManyRelations({localMetas: metas});
+    return metas;
+  }
+
+
+  private getColumnNameAlias(col, tableName?: string) {
+    return this.metas?.[tableName]?.columns?.find(c => c.cn === col.cn)?._cn || col._cn || this.getInflectedName(col.cn, this.connectionConfig?.meta?.inflection?.cn);
   }
 
   private baseLog(str, ...args): void {
@@ -1443,12 +1754,8 @@ export default abstract class BaseApiBuilder<T extends Noco> implements XcDynami
     await this.loadXcAcl()
   }
 
-  public get client() {
-    return this.connectionConfig?.client;
-  }
-
-  public getProjectId() {
-    return this.projectId;
+  public async onTableCreate(_tn: string, _args?: any) {
+    Tele.emit('evt', {evt_type: 'table:created'})
   }
 }
 

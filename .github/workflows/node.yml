@@ -11,15 +11,16 @@ on:
 
 jobs:
   cypress-run:
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Cypress run
-        uses: cypress-io/github-action@v2
-        with:
-          start: docker run -p 8080:8080 -d --name xc-instant nocodb/nocodb:latest ; sleep 10
-          wait-on: 'http://localhost:8080/dashboard'
+   runs-on: ubuntu-20.04
+   steps:
+     - name: Checkout
+       uses: actions/checkout@v2
+     - name: Cypress run
+       uses: cypress-io/github-action@v2
+       with:
+         start: docker-compose -f ./docker-compose-cypress.yml up
+         wait-on: 'http://localhost:8080/dashboard'
+         wait-on-timeout: 240      
   docker:
 
     runs-on: ubuntu-latest

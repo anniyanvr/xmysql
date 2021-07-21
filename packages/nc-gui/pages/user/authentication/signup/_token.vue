@@ -1,12 +1,9 @@
 <template>
-
   <v-container class="text-center" fluid>
     <v-row class="fluid" align="center">
       <v-col class="align-center">
         <v-row align="center">
           <v-col md="4" offset-md="4">
-
-
             <v-card class="pa-10 elevation-10 mt-10" color="">
               <div
                 style="position: absolute;top:-45px;
@@ -22,47 +19,44 @@
                   width="90"
                   height="90"
                   :src="require('~/assets/img/icons/512x512-trans.png')"
-                >
-                </v-img>
-
+                />
               </div>
 
-              <h1 class="mt-4">SIGN UP
+              <h1 class="mt-4">
+                {{ $t('signup.title') }}
                 {{ $route.query.redirect_to === '/referral' ? '& REFER' : '' }}
                 {{ $route.query.redirect_to === '/pricing' ? '& BUY' : '' }}
               </h1>
               <div>
-                <v-alert type="error" dismissible v-model="formUtil.formErr">
+                <v-alert v-model="formUtil.formErr" type="error" dismissible>
                   {{ formUtil.formErrMsg }}
                 </v-alert>
               </div>
-              <v-form v-if=" type === 'jwt'" v-model="formUtil.valid" ref="formType" @submit="MtdOnSignup" elevation-20>
-
-
+              <v-form v-if=" type === 'jwt'" ref="formType" v-model="formUtil.valid" elevation-20 @submit="MtdOnSignup">
                 <p v-if="firstUser" class="success--text">
-                  You will be the 'Super Admin'
+                  {{ $t('signup.message_1') }}
                 </p>
 
-
                 <v-text-field
-                  label="E-mail"
                   v-model="form.email"
+                  label="$t('signin.input_1')"
                   :rules="formRules.email"
-                  required>
-                </v-text-field>
+                  required
+                />
 
                 <v-text-field
+                  v-model="form.password"
                   name="input-10-2"
-                  label="Enter your password"
+                  label="$t('signin.input_2')"
                   min="8"
                   :append-icon="formUtil.e3 ? 'visibility' : 'visibility_off'"
-                  @click:append="() => (formUtil.e3 = !formUtil.e3)"
-                  v-model="form.password"
                   :rules="formRules.password"
-                  :type="formUtil.e3 ? 'password' : 'text'" required>
-                  <template v-slot:progress></template>
+                  :type="formUtil.e3 ? 'password' : 'text'"
+                  required
+                  @click:append="() => (formUtil.e3 = !formUtil.e3)"
+                >
+                  <template #progress />
                 </v-text-field>
-
 
                 <!---->
 
@@ -71,64 +65,75 @@
 
                 <!--                </vue-recaptcha>-->
 
-                <v-btn @click="MtdOnSignup" color="primary" class="btn--large"
-                       :disabled="!formUtil.recpatcha || !formUtil.valid" v-ge="['Sign Up ','']">
-                  &nbsp; Sign Up &nbsp;
+                <v-btn
+                  v-ge="['Sign Up ','']"
+                  color="primary"
+                  class="btn--large"
+                  :disabled="!formUtil.recpatcha || !formUtil.valid"
+                  @click="MtdOnSignup"
+                >
+                  &nbsp; {{ $t('signup.title') }} &nbsp;
                   <v-progress-circular
                     class="pb-3 pt-0 mt-0"
                     :value="formUtil.passwordProgress"
                     width="2"
                     size="18"
                     small
-                    color="success">
-                  </v-progress-circular>
-
+                    color="success"
+                  />
                 </v-btn>
 
-
                 <br>
                 <br>
                 <br>
-                <p class="font-weight-light caption" v-ge="['Already have an account ?','']">Already have an account ?
-                  <router-link to="/user/authentication/signin">Sign In</router-link>
+                <p v-ge="['Already have an account ?','']" class="font-weight-light caption">
+                  {{ $t('signup.message_2') }}
+                  <router-link to="/user/authentication/signin">
+                    {{ $t('signin.title') }}
+                  </router-link>
                 </p>
-
-
 
                 <v-btn
 
                   v-if="googleAuthEnabled"
-                  :href="(_isDev ?'http://localhost:8080/auth/google':'../auth/google') + `?state=${token}`" outlined
-                  large elevation-10
+                  :href="`${$axios.defaults.baseURL}/auth/google?state=${token}`"
+                  outlined
+                  large
+                  elevation-10
                   block
-                  color="blue">
-                  <img :src="require('~/assets/img/gmail.png')"
-                       class="img-responsive" alt="google"
-                       width="24px">
+                  color="blue"
+                >
+                  <img
+                    :src="require('~/assets/img/gmail.png')"
+                    class="img-responsive"
+                    alt="google"
+                    width="24px"
+                  >
                   <b>&nbsp; &nbsp;Sign In with Google</b>
                 </v-btn>
-
               </v-form>
               <!--              <p class="title">-->
               <!--                OR-->
               <!--              </p>-->
 
-              <v-form v-else-if=" type === 'masterKey'" v-model="formUtil.valid1" ref="formType1" @submit="MtdOnSignup"
-                      elevation-20>
-
-
+              <v-form
+                v-else-if=" type === 'masterKey'"
+                ref="formType1"
+                v-model="formUtil.valid1"
+                elevation-20
+                @submit="MtdOnSignup"
+              >
                 <v-text-field
-                  label="Admin Secret"
                   v-model="form.secret"
+                  label="Admin Secret"
                   :rules="formRules.secret"
 
                   min="8"
                   :append-icon="formUtil.e4 ? 'visibility' : 'visibility_off'"
-                  @click:append="() => (formUtil.e4 = !formUtil.e4)"
                   :type="formUtil.e4 ? 'password' : 'text'"
-                  required>
-                </v-text-field>
-
+                  required
+                  @click:append="() => (formUtil.e4 = !formUtil.e4)"
+                />
 
                 <!---->
 
@@ -137,24 +142,24 @@
 
                 <!--                </vue-recaptcha>-->
 
-                <v-btn @click="MtdOnSignup" color="primary" class="btn--large"
-                       :disabled="!formUtil.recpatcha || !formUtil.valid1" v-ge="['Authenticate','']">
+                <v-btn
+                  v-ge="['Authenticate','']"
+                  color="primary"
+                  class="btn--large"
+                  :disabled="!formUtil.recpatcha || !formUtil.valid1"
+                  @click="MtdOnSignup"
+                >
                   Authenticate&nbsp;
-
-
                 </v-btn>
 
+                <br>
 
+                <!--              <div>-->
 
-              <br>
-
-<!--              <div>-->
-
-
-<!--                <v-btn
+                <!--                <v-btn
 
                   v-if="googleAuthEnabled"
-                  :href="(_isDev ?'http://localhost:8080/auth/google':'../auth/google') + `?state=${token}`" outlined
+                  :href="`${$axios.defaults.baseURL}/auth/google?state=${token}`" outlined
                   large elevation-10
                   block
                   color="blue">
@@ -174,11 +179,10 @@
                                   <b>&nbsp; &nbsp;Sign In with Github</b>
                                 </v-btn>-->
 
-<!--              </div>-->
-
+                <!--              </div>-->
               </v-form>
               <template v-else-if="type==='none'">
-                <br/>
+                <br>
                 <v-alert type="warning" outlined icon="mdi-alert">
                   <!--                <v-icon color="warning">mdi-alert</v-icon>-->
                   Authentication not configured in configuration
@@ -189,17 +193,16 @@
             <br>
 
             <v-row justify="center">
-              <p class="text-right grey--text font-weight-light caption">By signing up, you agree to
-                <span @click="openUrl('https://nocodb.com/terms-of-service')" class="grey--text pointer"><u>Terms of service</u></span>
+              <p class="text-right grey--text font-weight-light caption">
+                By signing up, you agree to
+                <span class="grey--text pointer" @click="openUrl('https://nocodb.com/terms-of-service')"><u>Terms of service</u></span>
               </p> &nbsp;
 
-
               <div class="d-flex align-center mb-4 justify-center">
-                <v-checkbox v-model="subscribe" color="grey" dense hide-details class="mt-0  pt-0"></v-checkbox>
+                <v-checkbox v-model="subscribe" color="grey" dense hide-details class="mt-0  pt-0" />
                 <label class="caption grey--text font-weight-light">Subscribe to our weekly newsletter</label>
               </div>
             </v-row>
-
 
             <!--<br>-->
             <!--<h3>OR</h3>-->
@@ -214,14 +217,11 @@
             <!--</v-card>-->
             <!--<br>-->
             <!--<br>-->
-
           </v-col>
         </v-row>
-
       </v-col>
     </v-row>
   </v-container>
-
 </template>
 
 <script>
@@ -229,17 +229,21 @@
 // const {shell} = require("electron").remote.require(
 //   "./libs"
 // );
-import {mapGetters, mapActions} from 'vuex'
+import { isEmail } from '@/helpers'
 // import VueRecaptcha from 'vue-recaptcha';
 
 export default {
-  layout: 'empty',
   components: {
     // VueRecaptcha
   },
+  directives: {},
+  layout: 'empty',
+  validate() {
+    return true
+  },
+  props: {},
 
   data() {
-
     return {
       subscribe: true,
       isDev: (process.env.NODE_ENV === 'dev'),
@@ -247,13 +251,13 @@ export default {
       dialog: false,
       form: {
         email: null,
-        password: null,
+        password: null
       },
 
       formRules: {
         email: [
           v => !!v || 'E-mail is required',
-          v => /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/.test(v) || 'E-mail must be valid'
+          v => isEmail(v) || 'E-mail must be valid'
         ],
         password: [
           v => (this.PasswordValidate(v)) || this.passwordValidateMsg
@@ -274,154 +278,17 @@ export default {
         progressColorValue: 'red'
       },
 
-      googleAuthUrl: "/api/auth/google",
-      facebookAuthUrl: "/api/auth/facebook",
+      googleAuthUrl: '/api/auth/google',
+      facebookAuthUrl: '/api/auth/facebook'
     }
   },
-  methods: {
-    openUrl(url) {
-      shell.openExternal(url);
-    },
-    openGoogleSiginInBrowser(e) {
-      e.preventDefault();
-      // if(this._isMac) {
-      shell.openExternal(process.env.auth.google.url);
-      // }else{
-      //
-      // }
-    },
-    openGithubSiginInBrowser(e) {
-      e.preventDefault();
-      shell.openExternal(process.env.auth.github.url);
-    },
-    onNormalVerify() {
-      this.formUtil.recpatcha = true;
-      //this.formUtil.recpatcha = false;
-    },
-
-    progressColor(num) {
-      return this.formUtil.progressColorValue = ['error', 'warning', 'info', 'success'][Math.floor(num / 25)]
-    },
-
-    PasswordValidate(p) {
-
-      if (!p) {
-        this.passwordProgress = 0;
-        this.passwordValidateMsg = 'Atleast 8 letters with one Uppercase, one number and one special letter'
-        return false;
-      }
-
-      let msg = '';
-      let validation = true;
-      let progress = 0;
-
-      if (!(p.length >= 8)) {
-        msg += 'Atleast 8 letters. '
-        validation = validation && false;
-      } else {
-        progress = Math.min(100, progress + 25)
-      }
-
-      if (!(p.match(/.*[A-Z].*/))) {
-        msg += 'One Uppercase Letter. '
-        validation = validation && false;
-      } else {
-        progress = Math.min(100, progress + 25)
-      }
-
-      if (!(p.match(/.*[0-9].*/))) {
-        msg += 'One Number. '
-        validation = validation && false;
-      } else {
-        progress = Math.min(100, progress + 25)
-      }
-
-      if (!(p.match(/[$&+,:;=?@#|'<>.^*()%!-]/))) {
-        msg += 'One special letter. '
-        validation = validation && false;
-      } else {
-        progress = Math.min(100, progress + 25)
-      }
-
-      this.formUtil.passwordProgress = progress;
-      // console.log('progress', progress);
-      // console.log('color', this.progressColor(this.formUtil.passwordProgress));
-      this.progressColorValue = this.progressColor(this.formUtil.passwordProgress);
-
-
-      this.formUtil.passwordValidateMsg = msg;
-
-      //console.log('msg', msg, validation);
-
-      return validation;
-    },
-
-    PlusCounter() {
-      this.$store.dispatch('ActPlusCounter')
-    },
-
-    async MtdOnSignup(e) {
-      e.preventDefault();
-      if (this.type === 'jwt') {
-        if (this.$refs.formType.validate()) {
-          //this.$nuxt.$loading.start()
-          //console.log('hello', this.form);
-          this.form.firstName = this.form.username;
-          this.form.lastName = this.form.username;
-          //
-          // await this.$recaptchaLoaded()
-          // const recaptchaToken = await this.$recaptcha('login')
-          let err = await this.$store.dispatch('users/ActSignUp', {
-            ...this.form,
-            token: this.$route.params.token,
-            ignore_subscribe: !this.subscribe
-          })// recaptchaToken});
-
-          //console.log('in method signup', err);
-
-
-          await this.$store.dispatch('project/ActLoadProjectInfo');
-
-          if (err) {
-            this.formUtil.formErr = true;
-            this.formUtil.formErrMsg = err.data.msg;
-            console.log(err.data.msg);
-            return
-          }
-
-
-          //this.$nuxt.$loading.finish()
-        }
-      } else if (this.type === 'masterKey') {
-        const valid = await this.$store.dispatch('users/ActVerifyMasterKey', this.form.secret);
-        if (!valid) {
-          this.formUtil.formErr = true;
-          this.formUtil.formErrMsg = 'Invalid admin secret';
-          return
-        }
-        this.$store.commit('users/MutMasterKey', this.form.secret);
-      }
-
-
-      if ('redirect_to' in this.$route.query) {
-        this.$router.push(this.$route.query.redirect_to);
-      } else {
-        this.$router.push('/projects?toast');
-      }
-    },
-
-
-    MtdOnReset() {
-      //console.log('in method reset');
-    },
-
-    async MtdOnSignupGoogle(e) {
-      let err = null;
-      err = await this.$store.dispatch('users/ActAuthGoogle');
-      //console.log('MtdOnSignupGoogle', err);
-    },
-
-
+  head() {
+    return {
+      title: 'Sign Up | Noco',
+      meta: [
+        { hid: 'Sign Up To Noco', name: 'Sign Up To Noco', content: 'Sign Up To Noco' }
+      ]
+    }
   },
   computed: {
     counter() {
@@ -431,21 +298,19 @@ export default {
       return this.$store.getters['users/GtrUser']
     },
     type() {
-      return this.$store.state.project.projectInfo && this.$store.state.project.projectInfo.authType;
+      return this.$store.state.project.projectInfo && this.$store.state.project.projectInfo.authType
     },
     firstUser() {
-      return this.$store.state.project.projectInfo && this.$store.state.project.projectInfo.firstUser;
+      return this.$store.state.project.projectInfo && this.$store.state.project.projectInfo.firstUser
     },
     googleAuthEnabled() {
-      return this.$store.state.project.projectInfo && this.$store.state.project.projectInfo.googleAuthEnabled;
+      return this.$store.state.project.projectInfo && this.$store.state.project.projectInfo.googleAuthEnabled
     },
     token() {
-      return this.$route.params.token;
+      return this.$route.params.token
     }
   },
-
-  beforeCreated() {
-  },
+  watch: {},
   async created() {
 
     // const type = await this.$store.dispatch('users/ActGetAuthType');
@@ -456,37 +321,156 @@ export default {
     // document.head.appendChild(ckeditor);
   },
   mounted() {
-
-    //console.log(this.$route.query);
+    // console.log(this.$route.query);
 
     if ('buy' in this.$route.query) {
-      this.googleAuthUrl += '?redirect_to=/';
-      this.facebookAuthUrl += '?redirect_to=/';
+      this.googleAuthUrl += '?redirect_to=/'
+      this.facebookAuthUrl += '?redirect_to=/'
     } else {
-      this.googleAuthUrl += '?redirect_to=/';
-      this.facebookAuthUrl += '?redirect_to=/';
+      this.googleAuthUrl += '?redirect_to=/'
+      this.facebookAuthUrl += '?redirect_to=/'
     }
-
   },
   beforeDestroy() {
   },
-  destroy() {
-  },
-  validate({params}) {
-    return true
-  },
-  head() {
-    return {
-      title: 'Sign Up | Noco',
-      meta: [
-        {hid: 'Sign Up To Noco', name: 'Sign Up To Noco', content: 'Sign Up To Noco'}
-      ]
+  methods: {
+    openUrl(url) {
+      window.open(url, '_blank')
+    },
+    openGoogleSiginInBrowser(e) {
+      e.preventDefault()
+    },
+    openGithubSiginInBrowser(e) {
+      e.preventDefault()
+      // shell.openExternal(process.env.auth.github.url)
+    },
+    onNormalVerify() {
+      this.formUtil.recpatcha = true
+      // this.formUtil.recpatcha = false;
+    },
+
+    progressColor(num) {
+      this.formUtil.progressColorValue = ['error', 'warning', 'info', 'success'][Math.floor(num / 25)]
+      return this.formUtil.progressColorValue
+    },
+
+    PasswordValidate(p) {
+      if (!p) {
+        this.passwordProgress = 0
+        this.passwordValidateMsg = 'Atleast 8 letters with one Uppercase, one number and one special letter'
+        return false
+      }
+
+      let msg = ''
+      let validation = true
+      let progress = 0
+
+      if (!(p.length >= 8)) {
+        msg += 'Atleast 8 letters. '
+        validation = validation && false
+      } else {
+        progress = Math.min(100, progress + 25)
+      }
+
+      if (!(p.match(/.*[A-Z].*/))) {
+        msg += 'One Uppercase Letter. '
+        validation = validation && false
+      } else {
+        progress = Math.min(100, progress + 25)
+      }
+
+      if (!(p.match(/.*[0-9].*/))) {
+        msg += 'One Number. '
+        validation = validation && false
+      } else {
+        progress = Math.min(100, progress + 25)
+      }
+
+      if (!(p.match(/[$&+,:;=?@#|'<>.^*()%!-]/))) {
+        msg += 'One special letter. '
+        validation = validation && false
+      } else {
+        progress = Math.min(100, progress + 25)
+      }
+
+      this.formUtil.passwordProgress = progress
+      // console.log('progress', progress);
+      // console.log('color', this.progressColor(this.formUtil.passwordProgress));
+      this.progressColorValue = this.progressColor(this.formUtil.passwordProgress)
+
+      this.formUtil.passwordValidateMsg = msg
+
+      // console.log('msg', msg, validation);
+
+      return validation
+    },
+
+    PlusCounter() {
+      this.$store.dispatch('ActPlusCounter')
+    },
+
+    async MtdOnSignup(e) {
+      e.preventDefault()
+      if (this.type === 'jwt') {
+        if (this.$refs.formType.validate()) {
+          // this.$nuxt.$loading.start()
+          // console.log('hello', this.form);
+          this.form.firstName = this.form.username
+          this.form.lastName = this.form.username
+          //
+          // await this.$recaptchaLoaded()
+          // const recaptchaToken = await this.$recaptcha('login')
+          const err = await this.$store.dispatch('users/ActSignUp', {
+            ...this.form,
+            token: this.$route.params.token,
+            ignore_subscribe: !this.subscribe
+          })// recaptchaToken});
+
+          // console.log('in method signup', err);
+
+          await this.$store.dispatch('project/ActLoadProjectInfo')
+
+          if (err) {
+            this.formUtil.formErr = true
+            this.formUtil.formErrMsg = err.data.msg
+            console.log(err.data.msg)
+            return
+          }
+
+          // this.$nuxt.$loading.finish()
+        }
+      } else if (this.type === 'masterKey') {
+        const valid = await this.$store.dispatch('users/ActVerifyMasterKey', this.form.secret)
+        if (!valid) {
+          this.formUtil.formErr = true
+          this.formUtil.formErrMsg = 'Invalid admin secret'
+          return
+        }
+        this.$store.commit('users/MutMasterKey', this.form.secret)
+      }
+
+      if ('redirect_to' in this.$route.query) {
+        this.$router.push(this.$route.query.redirect_to)
+      } else {
+        this.$router.push('/projects?toast')
+      }
+    },
+
+    MtdOnReset() {
+      // console.log('in method reset');
+    },
+
+    async MtdOnSignupGoogle(e) {
+      await this.$store.dispatch('users/ActAuthGoogle')
+      // console.log('MtdOnSignupGoogle', err);
     }
 
   },
-  props: {},
-  watch: {},
-  directives: {},
+
+  beforeCreated() {
+  },
+  destroy() {
+  }
 
 }
 </script>
@@ -500,6 +484,8 @@ export default {
  *
  * @author Naveen MR <oof1lab@gmail.com>
  * @author Pranav C Balan <pranavxc@gmail.com>
+ * @author Wing-Kam Wong <wingkwong.code@gmail.com>
+ * @author Alejandro Moreno <info@pixplix.com>
  *
  * @license GNU AGPL version 3 or any later version
  *

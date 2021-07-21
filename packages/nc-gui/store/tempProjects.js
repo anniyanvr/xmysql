@@ -71,34 +71,34 @@ export const state = () => ({
       ]
     }
   ]
-});
+})
 
 export const mutations = {
   add(state, tempProject) {
-    console.log('data from form', tempProject);
-    state.list.push(tempProject);
+    console.log('data from form', tempProject)
+    state.list.push(tempProject)
   },
   update(state, { tempProject }) {},
   remove(state, { tempProject }) {
-    state.list.splice(state.list.indexOf(tempProject), 1);
+    state.list.splice(state.list.indexOf(tempProject), 1)
   },
   list(state, tempProjects) {
-    state.list = tempProjects;
+    state.list = tempProjects
   }
-};
+}
 
 export const getters = {
   list(state) {
-    return state.list;
+    return state.list
   }
-};
+}
 
 export const actions = {
   createProject({ commit, state }, data) {
     // async ops
-    commit('add', data);
+    commit('add', data)
   }
-};
+}
 /**
  * @copyright Copyright (c) 2021, Xgene Cloud Ltd
  *

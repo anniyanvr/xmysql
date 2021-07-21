@@ -1,19 +1,28 @@
 <template>
-  <div class="wrapper">
-    <input
-      :placeholder="inputDetails.placeholder || ''"
-      :type="show ? 'text' : 'password'"
-      v-on="parentListeners" v-model="localState" class="caption">
-    <v-icon small class="toggle-icon" @click="show = !show">
-
-      {{ show ? 'visibility_off' : 'visibility' }}
-    </v-icon>
-  </div>
+  <v-text-field
+    v-model="localState"
+    :type="show ? 'text' : 'password'"
+    dense
+    outlined
+    :rules="[v => !!v || !inputDetails.required || 'Required']"
+    :name="inputDetails.key"
+    :required="inputDetails.valid"
+    hide-details="auto"
+    :placeholder="inputDetails.placeholder || ''"
+    class="caption"
+    v-on="parentListeners"
+  >
+    <template #append>
+      <v-icon @click="show = !show">
+        {{ show ? 'visibility_off' : 'visibility' }}
+      </v-icon>
+    </template>
+  </v-text-field>
 </template>
 
 <script>
 export default {
-  name: "passwordField",
+  name: 'PasswordField',
   props: {
     value: String,
     inputDetails: Object
@@ -27,13 +36,13 @@ export default {
         return this.value
       },
       set(val) {
-        this.$emit('input', val);
+        this.$emit('input', val)
       }
     },
     parentListeners() {
-      const $listeners = {};
-      return $listeners;
-    },
+      const $listeners = {}
+      return $listeners
+    }
   }
 }
 </script>

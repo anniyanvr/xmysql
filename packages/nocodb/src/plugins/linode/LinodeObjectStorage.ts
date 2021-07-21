@@ -1,6 +1,7 @@
-import AWS from "aws-sdk";
 import fs from "fs";
 import path from "path";
+
+import AWS from "aws-sdk";
 import {IStorageAdapter, XcFile} from "nc-plugin";
 
 export default class LinodeObjectStorage implements IStorageAdapter {
@@ -79,7 +80,7 @@ export default class LinodeObjectStorage implements IStorageAdapter {
       const tempFile = path.join(process.cwd(), 'temp.txt');
       const createStream = fs.createWriteStream(tempFile);
       createStream.end();
-      await this.fileCreate('/test.txt', {
+      await this.fileCreate('/nc-test-file.txt', {
         path: tempFile,
         mimetype: '',
         originalname: 'temp.txt',

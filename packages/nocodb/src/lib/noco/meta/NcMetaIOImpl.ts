@@ -1,11 +1,14 @@
-import NcMetaIO, {META_TABLES} from "./NcMetaIO";
-import Noco from "../Noco";
-import {NcConfig} from "../../../interface/config";
-import {XKnex, Knex} from "../../dataMapper";
-import NcHelp from "../../utils/NcHelp";
-import {nanoid} from 'nanoid';
-import XcMigrationSource from "../common/XcMigrationSource";
 import CryptoJS from 'crypto-js';
+import {nanoid} from 'nanoid';
+
+import {NcConfig} from "../../../interface/config";
+import {Knex, XKnex} from "../../dataMapper";
+import NcHelp from "../../utils/NcHelp";
+import Noco from "../Noco";
+import XcMigrationSource from "../common/XcMigrationSource";
+
+import NcMetaIO, {META_TABLES} from "./NcMetaIO";
+
 
 export default class NcMetaIOImpl extends NcMetaIO {
 
@@ -55,6 +58,7 @@ export default class NcMetaIOImpl extends NcMetaIO {
 
 
   private connection: XKnex;
+  // todo: need to fix
   private trx: Knex.Transaction;
 
 
@@ -539,7 +543,9 @@ export default class NcMetaIOImpl extends NcMetaIO {
   }
 
   async startTransaction() {
-    this.trx = await this.connection.transaction();
+    if (!this.trx) {
+      this.trx = await this.connection.transaction();
+    }
   }
 
   async metaReset(project_id: string, dbAlias: string, apiType?: string): Promise<void> {

@@ -1,7 +1,10 @@
-import {BaseModelSql} from "../../dataMapper";
-import {NextFunction, Request, Response} from "express";
-import {Acl, Acls, Route} from "../../../interface/config";
 import autoBind from 'auto-bind';
+import {NextFunction, Request, Response} from "express";
+
+import {Acl, Acls, Route} from "../../../interface/config";
+import {BaseModelSql} from "../../dataMapper";
+
+
 import {RestBaseCtrl} from "./RestBaseCtrl";
 
 export class RestCtrlBelongsTo extends RestBaseCtrl {
@@ -51,7 +54,7 @@ export class RestCtrlBelongsTo extends RestBaseCtrl {
   public async list(req: Request | any, res): Promise<void> {
     const data = await req.childModel.belongsTo({
       parents: req.parentModel.tn,
-      ...req.queryF
+      ...req.query
     } as any);
     res.xcJson(data);
   }

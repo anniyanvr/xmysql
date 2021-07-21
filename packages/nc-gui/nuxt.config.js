@@ -1,13 +1,12 @@
-import colors from 'vuetify/es5/util/colors';
-import MonacoEditorWebpackPlugin from "monaco-editor-webpack-plugin";
+import MonacoEditorWebpackPlugin from 'monaco-editor-webpack-plugin'
 
 // import HtmlWebpackPlugin from 'html-webpack-plugin';
-const fs = require('fs');
-const packageJson = JSON.parse(fs.readFileSync('../nc-lib-gui/package.json', 'utf8'));
+const fs = require('fs')
+const packageJson = JSON.parse(fs.readFileSync('../nc-lib-gui/package.json', 'utf8'))
 const version = packageJson.version.replace(/\.(\d+)$/, (_, v) => {
   // if (v === '99') throw new Error('Package version reached 99')
   return `.${++v}`
-});
+})
 
 export default {
   /*
@@ -29,22 +28,12 @@ export default {
     titleTemplate: '',
     title: 'NocoDB',
     meta: [
-      {charset: 'utf-8'},
-      {name: 'viewport', content: 'width=device-width, initial-scale=1'},
-      {hid: 'description', name: 'description', content: process.env.npm_package_description || ''}
+      { charset: 'utf-8' },
+      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+      { hid: 'description', name: 'description', content: process.env.npm_package_description || '' }
     ],
     link: [
-      {rel: 'icon', type: 'image/x-icon', href: './favicon-32.png'}
-    ],
-    script: [
-      // {
-      //   // src: 'https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.11/ace.js'
-      //   // }  ,{
-      //   //   src: 'https://unpkg.com/ace-diff@3.0.3/dist/ace-diff.min.js'
-      // },
-      {
-        src: 'https://cdn.jsdelivr.net/npm/canvas-confetti@1.3.2/dist/confetti.browser.min.js'
-      }
+      { rel: 'icon', type: 'image/x-icon', href: './favicon-32.png' }
     ]
   },
   /*
@@ -55,21 +44,19 @@ export default {
   ** https://nuxtjs.org/guide/plugins
   */
   plugins: [
-    "~/plugins/xutils.js",
-    {src: '~plugins/localStorage.js', ssr: false},
-    {src: '~plugins/axiosInterceptor.js', ssr: false},
-    // {src: '~plugins/hotjar.js', ssr: false},
-    // "@/plugins/vuetify",
-    "@/plugins/veeValidate",
-    "@/plugins/vueTour",
-    {src: "@/plugins/vueShortkey", ssr: false},
-    "@/plugins/vueClipboard",
-    "@/plugins/globalComponentLoader",
-    "@/plugins/globalMixin",
-    "~/plugins/i18n.js",
-    {src: '~plugins/projectLoader.js', ssr: false},
-    // {src: '~plugins/recaptchav3.js', ssr: false},
-    // {src: '~plugins/tawk.js', ssr: false},
+    '~/plugins/xutils.js',
+    { src: '~plugins/localStorage.js', ssr: false },
+    { src: '~plugins/confetti.js', ssr: false },
+    { src: '~plugins/axiosInterceptor.js', ssr: false },
+    '@/plugins/veeValidate',
+    '@/plugins/vueTour',
+    { src: '@/plugins/vueShortkey', ssr: false },
+    '@/plugins/vueClipboard',
+    '@/plugins/globalComponentLoader',
+    '@/plugins/globalMixin',
+    '@/plugins/globalEventBus',
+    '~/plugins/i18n.js',
+    { src: '~plugins/projectLoader.js', ssr: false }
   ],
   /*
   ** Auto import components
@@ -80,7 +67,7 @@ export default {
   ** Nuxt.js dev-modules
   */
   buildModules: [
-    '@nuxtjs/vuetify',
+    '@nuxtjs/vuetify'
   ],
   /*
   ** Nuxt.js modules
@@ -89,48 +76,32 @@ export default {
     // Doc: https://axios.nuxtjs.org/usage
     '@nuxtjs/axios',
     'vue-github-buttons/nuxt',
-    '@nuxtjs/toast',
+    '@nuxtjs/toast'
   ],
   toast: {
-    position: 'top-center',
+    position: 'top-center'
   },
   /*
   ** Axios module configuration
   ** See https://axios.nuxtjs.org/options
   */
   axios: {
-    baseURL: process.env.NODE_ENV === 'production' ? '../' : 'http://localhost:8080/',
-    // baseURL: 'http://localhost:8080/',
-    // baseURL: 'http://localhost:8080/',
+    baseURL: process.env.NC_BACKEND_URL || (process.env.NODE_ENV === 'production' ? '..' : 'http://localhost:8080')
   },
   /*
   ** vuetify module configuration
   ** https://github.com/nuxt-community/vuetify-module
   */
   router: {
-    mode: "hash",
+    mode: 'hash',
     // base: '/xc/',
     middleware: ['auth']
   },
-  // vuetify: {
-  //   customVariables: ['~/assets/variables.scss'],
-  //   theme: {
-  //     dark: true,
-  //     themes: {
-  //       dark: {
-  //         primary: colors.blue.darken2,
-  //         accent: colors.grey.darken3,
-  //         secondary: colors.amber.darken3,
-  //         info: colors.teal.lighten1,
-  //         warning: colors.amber.base,
-  //         error: colors.deepOrange.accent4,
-  //         success: colors.green.accent3
-  //       }
-  //     }
-  //   }
-  // },
   vuetify: {
-    // theme: {dark: true},
+    defaultAssets: {
+      // font: false,
+      icons: false
+    },
     optionsPath: '@/config/vuetify.options.js',
     treeShake: true,
     customVariables: ['./config/variables.scss']
@@ -141,34 +112,26 @@ export default {
   */
   build: {
     cache: true,
-    // parallel: true,
-    // hardSource: true,
-    // filenames: {
-    //   app: ({isDev}) => isDev ? '[name].js' : '[name].js',
-    //   chunk: ({isDev}) => isDev ? '[name].js' : '[name].js',
-    // },
-    // splitChunks: {
-    //   commons: false
-    // },
     plugins: [
-      // new VuetifyLoaderPlugin(),
       new MonacoEditorWebpackPlugin({
         // https://github.com/Microsoft/monaco-editor-webpack-plugin#options
         // Include a subset of languages support
         // Some language extensions like typescript are so huge that may impact build performance
         // e.g. Build full languages support with webpack 4.0 takes over 80 seconds
         // Languages are loaded on demand at runtime
-        languages: ["sql", "json", 'javascript'],
+        languages: ['sql', 'json', 'javascript'],
         features: ['!gotoSymbol']
       })
     ],
     // publicPath: process.env.NODE_ENV === 'production' ? `https://cdn.jsdelivr.net/npm/nc-lib-gui@${version}/lib/dist/` : undefined,
-    publicPath: process.env.NODE_ENV === 'production' ? `./_nuxt/` : undefined,
-    extend(config, {isDev, isClient}) {
+    publicPath: process.env.NODE_ENV === 'production' ? './_nuxt/' : undefined,
+    extend(config, { isDev, isClient }) {
+      if (isDev) {
+        config.devtool = isClient ? 'source-map' : 'inline-source-map'
+      }
 
-
-      config.externals = config.externals || {};
-      config.externals ['@microsoft/typescript-etw'] = 'FakeModule';
+      config.externals = config.externals || {}
+      config.externals['@microsoft/typescript-etw'] = 'FakeModule'
 
       // config.plugins.push(new MonacoEditorWebpackPlugin({
       //   languages: ['javascript', 'typescript', 'json', 'mysql', 'sql', 'pgsql'],
@@ -176,7 +139,6 @@ export default {
       // }))
 
       if (!isDev) {
-
         // const WebpackObfuscator = require('webpack-obfuscator');
         // config.plugins.push(new WebpackObfuscator({
         //   compact: true,
@@ -211,9 +173,8 @@ export default {
         //   // if (v === '99') throw new Error('Package version reached 99')
         //   return `.${++v}`
         // });
-        packageJson.version = version;
+        packageJson.version = version
         fs.writeFileSync('../nc-lib-gui/package.json', JSON.stringify(packageJson, 0, 2))
-
 
         // config.output.publicPath = `https://cdn.jsdelivr.net/npm/nc-lib-gui@${version}/lib/dist/`;
         // const htmlWebpack = config.plugins.find(w => w instanceof HtmlWebpackPlugin);
@@ -228,54 +189,34 @@ export default {
         config.output.publicPath = './_nuxt/'
       }
 
-      return config;
+      return config
     }
   },
   loading: {
     color: '#13f4ef',
-    height: '2px',
+    height: '0px',
     continuous: true,
     duration: 3000
   },
   css: [
+    // '@/assets/style/fonts.css',
     '@/assets/css/global.css',
     // "~/assets/style/app.styl",
-    "@mdi/font/css/materialdesignicons.css",
-    "~/assets/style/style.css",
+    '@mdi/font/css/materialdesignicons.css',
+    '~/assets/style/style.css',
     '~/assets/style.css',
     'material-design-icons-iconfont/dist/material-design-icons.css'
   ],
   env: {
     EE: !!process.env.EE
-  },
+  }
 }
 /**
  * @copyright Copyright (c) 2021, Xgene Cloud Ltd
  *
  * @author Naveen MR <oof1lab@gmail.com>
  * @author Pranav C Balan <pranavxc@gmail.com>
- *
- * @license GNU AGPL version 3 or any later version
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- */
-/**
- * @copyright Copyright (c) 2021, Xgene Cloud Ltd
- *
- * @author Naveen MR <oof1lab@gmail.com>
- * @author Pranav C Balan <pranavxc@gmail.com>
+ * @author Wing-Kam Wong <wingkwong.code@gmail.com>
  *
  * @license GNU AGPL version 3 or any later version
  *

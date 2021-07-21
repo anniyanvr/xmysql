@@ -1,6 +1,6 @@
-import BaseRender from "../../BaseRender";
+import BaseModelXcMeta from "./BaseModelXcMeta";
 
-class ModelXcMetaMssql extends BaseRender {
+class ModelXcMetaMssql extends BaseModelXcMeta{
 
   /**
    * @param dir
@@ -357,9 +357,6 @@ class ModelXcMetaMssql extends BaseRender {
       case "set":
         str += `"SET(${column.dtxp})"`;
         break;
-      case "time":
-        str += `DataTypes.TIME`;
-        break;
       case "geometry":
         str += `DataTypes.GEOMETRY`;
         break;
@@ -520,9 +517,9 @@ class ModelXcMetaMssql extends BaseRender {
 
   getXcColumnsObject(args) {
 
-    let columnsArr = [];
+    const columnsArr = [];
 
-    for (let column of args.columns) {
+    for (const column of args.columns) {
       const columnObj = {
         validate: {
           func: [],
@@ -570,9 +567,13 @@ class ModelXcMetaMssql extends BaseRender {
 
       columnsArr.push(columnObj)
     }
+
+    this.mapDefaultPrimaryValue(columnsArr);
+
     return columnsArr;
   }
 
+/*
   getObject() {
     return {
       tn: this.ctx.tn,
@@ -586,6 +587,7 @@ class ModelXcMetaMssql extends BaseRender {
     }
 
   }
+*/
 
 
   _getUIDataType(col):any {
