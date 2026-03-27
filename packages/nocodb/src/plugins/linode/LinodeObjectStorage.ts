@@ -1,120 +1,50 @@
-import fs from "fs";
-import path from "path";
+import { S3 as S3Client } from '@aws-sdk/client-s3';
+import type { S3ClientConfig } from '@aws-sdk/client-s3';
+import type { IStorageAdapterV2 } from '~/types/nc-plugin';
+import GenericS3 from '~/plugins/GenericS3/GenericS3';
 
-import AWS from "aws-sdk";
-import {IStorageAdapter, XcFile} from "nc-plugin";
+interface LinodeObjectStorageInput {
+  bucket: string;
+  region: string;
+  access_key: string;
+  access_secret: string;
+  acl?: string;
+}
 
-export default class LinodeObjectStorage implements IStorageAdapter {
+export default class LinodeObjectStorage
+  extends GenericS3
+  implements IStorageAdapterV2
+{
+  name = 'LinodeObjectStorage';
 
-  private s3Client: AWS.S3;
-  private input: any;
-
-  constructor(input: any) {
-    this.input = input;
+  protected input: LinodeObjectStorageInput;
+  constructor(input: unknown) {
+    super(input as LinodeObjectStorageInput);
   }
 
-
-  async fileCreate(key: string, file: XcFile): Promise<any> {
-
-    const uploadParams: any = {
-      ACL: 'public-read'
+  protected get defaultParams() {
+    return {
+      Bucket: this.input.bucket,
+      ACL: this.input?.acl || 'public-read',
     };
-    return new Promise((resolve, reject) => {
-      // Configure the file stream and obtain the upload parameters
-      const fileStream = fs.createReadStream(file.path);
-      fileStream.on('error', (err) => {
-        console.log('File Error', err);
-        reject(err);
-      });
-
-      uploadParams.Body = fileStream;
-      uploadParams.Key = key;
-
-      // call S3 to retrieve upload file to specified bucket
-      this.s3Client.upload(uploadParams, (err, data) => {
-        if (err) {
-          console.log("Error", err);
-          reject(err);
-        }
-        if (data) {
-          resolve(data.Location);
-        }
-      });
-    });
-  }
-
-  public async fileDelete(_path: string): Promise<any> {
-    return Promise.resolve(undefined);
-  }
-
-  public async fileRead(key: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.s3Client.getObject({Key: key} as any, (err, data) => {
-        if (err) {
-          return reject(err);
-        }
-        if (!data?.Body) {
-          return reject(data);
-        }
-        return resolve(data.Body);
-      });
-    });
   }
 
   public async init(): Promise<any> {
-    const s3Options: any = {
-      params: {Bucket: this.input.bucket},
-      region: this.input.region
+    const s3Options: S3ClientConfig = {
+      region: this.input.region,
+      credentials: {
+        accessKeyId: this.input.access_key,
+        secretAccessKey: this.input.access_secret,
+      },
+      endpoint: `https://${this.input.region}.linodeobjects.com`,
     };
 
-    s3Options.accessKeyId = this.input.access_key
-    s3Options.secretAccessKey = this.input.access_secret;
-
-    s3Options.endpoint = new AWS.Endpoint(`${this.input.region}.linodeobjects.com`);
-
-    this.s3Client = new AWS.S3(s3Options);
+    this.s3Client = new S3Client(s3Options);
   }
 
-  public async test(): Promise<boolean> {
-    try {
-      const tempFile = path.join(process.cwd(), 'temp.txt');
-      const createStream = fs.createWriteStream(tempFile);
-      createStream.end();
-      await this.fileCreate('/nc-test-file.txt', {
-        path: tempFile,
-        mimetype: '',
-        originalname: 'temp.txt',
-        size: ''
-      });
-      fs.unlinkSync(tempFile);
-      return true;
-    } catch (e) {
-      throw e;
-    }
+  getUploadedPath(path: string): { path?: string; url?: string } {
+    return {
+      url: `https://${this.input.bucket}.${this.input.region}.linodeobjects.com/${path}`,
+    };
   }
-
 }
-
-
-/**
- * @copyright Copyright (c) 2021, Xgene Cloud Ltd
- *
- * @author Naveen MR <oof1lab@gmail.com>
- * @author Pranav C Balan <pranavxc@gmail.com>
- *
- * @license GNU AGPL version 3 or any later version
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- */

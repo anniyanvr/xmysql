@@ -1,13 +1,11 @@
-import {IStorageAdapter, XcStoragePlugin} from "nc-plugin";
-
-import OvhCloud from "./OvhCloud";
-
+import OvhCloud from './OvhCloud';
+import type { IStorageAdapterV2 } from '~/types/nc-plugin';
+import { XcStoragePlugin } from '~/types/nc-plugin';
 
 class OvhCloudPlugin extends XcStoragePlugin {
-
   private static storageAdapter: OvhCloud;
 
-  public  getAdapter(): IStorageAdapter {
+  public getAdapter(): IStorageAdapterV2 {
     return OvhCloudPlugin.storageAdapter;
   }
 
@@ -15,7 +13,6 @@ class OvhCloudPlugin extends XcStoragePlugin {
     OvhCloudPlugin.storageAdapter = new OvhCloud(config);
     await OvhCloudPlugin.storageAdapter.init();
   }
-
 }
 
 export default OvhCloudPlugin;

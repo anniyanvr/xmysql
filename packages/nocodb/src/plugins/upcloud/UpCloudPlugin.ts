@@ -1,13 +1,11 @@
-import {IStorageAdapter, XcStoragePlugin} from "nc-plugin";
-
-import UpoCloud from "./UpoCloud";
-
+import UpoCloud from './UpoCloud';
+import type { IStorageAdapterV2 } from '~/types/nc-plugin';
+import { XcStoragePlugin } from '~/types/nc-plugin';
 
 class UpCloudPlugin extends XcStoragePlugin {
-
   private static storageAdapter: UpoCloud;
 
-  public  getAdapter(): IStorageAdapter {
+  public getAdapter(): IStorageAdapterV2 {
     return UpCloudPlugin.storageAdapter;
   }
 
@@ -15,7 +13,6 @@ class UpCloudPlugin extends XcStoragePlugin {
     UpCloudPlugin.storageAdapter = new UpoCloud(config);
     await UpCloudPlugin.storageAdapter.init();
   }
-
 }
 
 export default UpCloudPlugin;

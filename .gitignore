@@ -2,8 +2,8 @@
 # ===========
 .DS_Store
 ehthumbs.db
-Icon?
 Thumbs.db
+
 
 # Node and related ecosystem
 # ==========================
@@ -38,11 +38,15 @@ _site/
 *.pid
 *.gz
 *.tmp
+*.tmp.md
 *.bak
 *.swp
-logs/
 build/
 uploads/
+
+# Visual Studio Code
+# =========
+.vscode
 
 # Sublime editor
 # ==============
@@ -66,7 +70,6 @@ local.properties
 # Cloud9 IDE
 # =========
 .c9/
-data/
 mongod
 
 # Visual Studio
@@ -79,3 +82,36 @@ mongod
 .history
 /packages/nocodb/docker/main.js.LICENSE.txt
 /packages/nocodb/noco_log.db
+
+# NC_DBs
+#=========
+nc_minimal_dbs/
+test_noco.db
+
+# ngrok config
+httpbin
+.run/test-debug.run.xml
+
+/packages/nc-secret-mgr/dist/index.js
+/packages/nc-secret-mgr/dist/index.js.map
+
+# nix
+result
+
+.cursorignore
+
+
+
+# Temp
+migrate-colors.js
+antd.variable.css
+
+# Claude - per-branch working memory (ephemeral, local only)
+.claude/branches/
+
+# nocodb-api skill credential store
+.claude/skills/nocodb-dev-api/.credentials.json
+/.claude/worktrees/
+.playwright-mcp
+.playwright-cli
+.claude

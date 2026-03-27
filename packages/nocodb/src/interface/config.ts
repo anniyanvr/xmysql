@@ -1,6 +1,8 @@
-import {Handler} from "express";
-import * as e from 'express';
-import Knex from "knex";
+import type { Socket } from 'socket.io';
+import type { Handler } from 'express';
+import type * as e from 'express';
+import type { Knex } from 'knex';
+import type { NcContext, NcRequest, UserType } from 'nocodb-sdk';
 
 export interface Route {
   path: string;
@@ -13,7 +15,6 @@ export interface Route {
   functions?: string[];
 }
 
-
 export enum RouteType {
   GET = 'get',
   POST = 'post',
@@ -21,33 +22,33 @@ export enum RouteType {
   PATCH = 'patch',
   DELETE = 'delete',
   HEAD = 'head',
-  OPTIONS = 'options'
+  OPTIONS = 'options',
 }
 
-type InflectionTypes = 'pluralize' |
-  'singularize' |
-  'inflect' |
-  'camelize' |
-  'underscore' |
-  'humanize' |
-  'capitalize' |
-  'dasherize' |
-  'titleize' |
-  'demodulize' |
-  'tableize' |
-  'classify' |
-  'foreign_key' |
-  'ordinalize' |
-  'transform' | 'none' ;
+type InflectionTypes =
+  | 'pluralize'
+  | 'singularize'
+  | 'inflect'
+  | 'camelize'
+  | 'underscore'
+  | 'humanize'
+  | 'capitalize'
+  | 'dasherize'
+  | 'titleize'
+  | 'demodulize'
+  | 'tableize'
+  | 'classify'
+  | 'foreign_key'
+  | 'ordinalize'
+  | 'transform'
+  | 'none';
 
 export interface DbConfig extends Knex.Config {
-
   client: string;
 
   connection: Knex.StaticConnectionConfig | Knex.Config | any;
 
   meta: {
-
     dbAlias: string;
 
     metaTables?: 'db' | 'file';
@@ -73,7 +74,7 @@ export interface DbConfig extends Knex.Config {
       type: 'rest' | 'graphql' | 'grpc';
       prefix: string;
       swagger?: boolean;
-      graphiql?: boolean
+      graphiql?: boolean;
       graphqlDepthLimit?: number;
     };
 
@@ -86,15 +87,14 @@ export interface DbConfig extends Knex.Config {
       print?: boolean;
       explain?: boolean;
       measure?: boolean;
-    },
+    };
     reset?: boolean;
-    dbtype?: "vitess" | string;
+    dbtype?: 'vitess' | string;
     pluralize?: boolean;
     inflection?: {
       tn?: InflectionTypes;
       cn?: InflectionTypes;
-    }
-
+    };
   };
 }
 
@@ -117,19 +117,19 @@ export interface AuthConfig {
     secret: string;
     [key: string]: any;
     dbAlias?: string;
-    options?: JwtOptions
-  },
+    options?: JwtOptions;
+  };
   masterKey?: {
-    secret: string
+    secret: string;
   };
   middleware?: {
     url: string;
-  },
+  };
   disabled?: boolean;
 }
 
 export interface MiddlewareConfig {
-  handler?: (...args: any[]) => any
+  handler?: (...args: any[]) => any;
 }
 
 export interface ACLConfig {
@@ -138,30 +138,29 @@ export interface ACLConfig {
 }
 
 export interface MailerConfig {
-  [key: string]: any
+  [key: string]: any;
 }
 
 export interface ServerlessConfig {
   aws?: {
-    lambda: boolean
+    lambda: boolean;
   };
   gcp?: {
-    cloudFunction: boolean
+    cloudFunction: boolean;
   };
   azure?: {
-    cloudFunctionApp: boolean
+    cloudFunctionApp: boolean;
   };
   zeit?: {
-    now: boolean
+    now: boolean;
   };
   alibaba?: {
-    functionCompute: boolean
+    functionCompute: boolean;
   };
   serverlessFramework?: {
-    http: boolean
+    http: boolean;
   };
 }
-
 
 export interface NcGui {
   path?: string;
@@ -177,12 +176,11 @@ export interface NcConfig {
 
   envs: {
     [key: string]: {
-      db: DbConfig[],
-      api?: any,
+      db: DbConfig[];
+      api?: any;
       publicUrl?: string;
-    }
-  }
-
+    };
+  };
 
   // dbs: DbConfig[];
 
@@ -197,20 +195,19 @@ export interface NcConfig {
   make?: () => NcConfig;
   serverless?: ServerlessConfig;
 
-
   toolDir?: string;
-  env?: 'production' | 'dev' | 'test' | string,
-  workingEnv?: string,
+  env?: 'production' | 'dev' | 'test' | string;
+  workingEnv?: string;
 
-  seedsFolder?: string | string[],
-  queriesFolder?: string | string[],
-  apisFolder?: string | string[],
-  projectType?: "rest" | "graphql" | "grpc",
-  type?: "mvc" | "package" | "docker",
-  language?: "ts" | "js",
+  seedsFolder?: string | string[];
+  queriesFolder?: string | string[];
+  apisFolder?: string | string[];
+  baseType?: 'rest' | 'graphql' | 'grpc';
+  type?: 'mvc' | 'package' | 'docker';
+  language?: 'ts' | 'js';
   meta?: {
-    db?: any
-  },
+    db?: any;
+  };
   api?: any;
   gui?: NcGui;
   try?: boolean;
@@ -219,51 +216,52 @@ export interface NcConfig {
 
   prefix?: string;
   publicUrl?: string;
-
 }
 
 export interface Event {
   title: string;
   tn: string;
-  url
-  headers
-  operation
-  event
-  retry
-  max
-  interval
-  timeout
+  url;
+  headers;
+  operation;
+  event;
+  retry;
+  max;
+  interval;
+  timeout;
 }
 
-
 export interface Acl {
-  [role: string]: {
-    create: boolean | ColumnAcl
-    [key: string]: boolean | ColumnAcl
-  } | boolean |any
+  [role: string]:
+    | {
+        create: boolean | ColumnAcl;
+        [key: string]: boolean | ColumnAcl;
+      }
+    | boolean
+    | any;
 }
 
 export interface ColumnAcl {
   columns: {
-    [cn: string]: boolean
-  },
+    [cn: string]: boolean;
+  };
   assign?: {
-    [cn: string]: any
-  }
+    [cn: string]: any;
+  };
 }
 
 export interface Acls {
-  [tn: string]: Acl
+  [tn: string]: Acl;
 }
 
 export enum ServerlessType {
-  AWS_LAMBDA = "AWS_LAMBDA",
-  GCP_FUNCTION = "GCP_FUNCTION",
-  AZURE_FUNCTION_APP = "AZURE_FUNCTION_APP",
-  ALIYUN = "ALIYUN",
-  ZEIT = "ZEIT",
-  LYRID = "LYRID",
-  SERVERLESS = "SERVERLESS"
+  AWS_LAMBDA = 'AWS_LAMBDA',
+  GCP_FUNCTION = 'GCP_FUNCTION',
+  AZURE_FUNCTION_APP = 'AZURE_FUNCTION_APP',
+  ALIYUN = 'ALIYUN',
+  ZEIT = 'ZEIT',
+  LYRID = 'LYRID',
+  SERVERLESS = 'SERVERLESS',
 }
 
 export class Result {
@@ -276,11 +274,7 @@ export class Result {
     this.message = message;
     this.data = data;
   }
-
 }
-
-
-
 
 enum HTTPType {
   GET = 'get',
@@ -289,8 +283,7 @@ enum HTTPType {
   DELETE = 'delete',
   PATCH = 'patch',
   HEAD = 'head',
-  OPTIONS = 'options'
-
+  OPTIONS = 'options',
 }
 
 export interface XcRoute {
@@ -301,25 +294,44 @@ export interface XcRoute {
   isCustom?: boolean;
 }
 
-/**
- * @copyright Copyright (c) 2021, Xgene Cloud Ltd
- *
- * @author Naveen MR <oof1lab@gmail.com>
- * @author Pranav C Balan <pranavxc@gmail.com>
- *
- * @license GNU AGPL version 3 or any later version
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- */
+export interface AppConfig {
+  throttler: {
+    data?: {
+      ttl: number;
+      max_apis: number;
+      block_duration: number;
+    };
+    meta?: {
+      ttl: number;
+      max_apis: number;
+      block_duration: number;
+    };
+    scim?: {
+      ttl: number;
+      max_apis: number;
+      block_duration: number;
+    };
+    public?: {
+      ttl: number;
+      max_apis: number;
+      block_duration: number;
+    };
+    calc_execution_time: boolean;
+  };
+  basicAuth: {
+    username: string;
+    password: string;
+  };
+  auth: {
+    emailPattern?: RegExp | null;
+    disableEmailAuth: boolean;
+  };
+  mainSubDomain: string;
+  dashboardPath: string;
+}
+
+interface NcSocket extends Socket {
+  user?: UserType;
+}
+
+export { NcContext, NcRequest, NcSocket };

@@ -1,15 +1,15 @@
 name: "Publish : Docker Readme"
 
-on:
-  push:
-    branches: [ master ]
+on: workflow_dispatch
+#  push:
+#    branches: [ master ]
 
 jobs:
   docker-description:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Docker Hub Description
         uses: peter-evans/dockerhub-description@v2
         with:

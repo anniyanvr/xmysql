@@ -1,13 +1,11 @@
-import {IWebhookNotificationAdapter, XcWebhookNotificationPlugin} from "nc-plugin";
-
-import Mattermost from "./Mattermost";
-
+import Mattermost from './Mattermost';
+import type { IWebhookNotificationAdapter } from '~/types/nc-plugin';
+import { XcWebhookNotificationPlugin } from '~/types/nc-plugin';
 
 class MattermostPlugin extends XcWebhookNotificationPlugin {
-
   private static notificationAdapter: Mattermost;
 
-  public  getAdapter(): IWebhookNotificationAdapter {
+  public getAdapter(): IWebhookNotificationAdapter {
     return MattermostPlugin.notificationAdapter;
   }
 
@@ -15,7 +13,6 @@ class MattermostPlugin extends XcWebhookNotificationPlugin {
     MattermostPlugin.notificationAdapter = new Mattermost();
     await MattermostPlugin.notificationAdapter.init();
   }
-
 }
 
 export default MattermostPlugin;

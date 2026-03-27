@@ -1,128 +1,104 @@
-import fs from "fs";
-import path from "path";
+import { S3 as S3Client } from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
+import type { S3ClientConfig } from '@aws-sdk/client-s3';
+import type { IStorageAdapterV2 } from '~/types/nc-plugin';
+import GenericS3 from '~/plugins/GenericS3/GenericS3';
+import { S3_PATCH_KEYS } from '~/constants';
+import { NcError } from '~/helpers/ncError';
 
-import AWS from "aws-sdk";
-import {IStorageAdapter, XcFile} from "nc-plugin";
+interface S3Input {
+  bucket: string;
+  region?: string;
+  access_key?: string;
+  access_secret?: string;
+  endpoint?: string;
+  acl?: string;
+  force_path_style?: boolean;
+}
 
-export default class S3 implements IStorageAdapter {
+export default class S3 extends GenericS3 implements IStorageAdapterV2 {
+  name = 'S3';
 
-  private s3Client: AWS.S3;
-  private input: any;
+  protected input: S3Input;
 
   constructor(input: any) {
-    this.input = input;
+    super(input as S3Input);
   }
 
-
-  async fileCreate(key: string, file: XcFile): Promise<any> {
-
-    const uploadParams: any = {
-      ACL: 'public-read'
+  get defaultParams() {
+    return {
+      ...(this.input.acl ? { ACL: this.input.acl } : {}),
+      Bucket: this.input.bucket,
     };
-    return new Promise((resolve, reject) => {
-      // Configure the file stream and obtain the upload parameters
-      const fileStream = fs.createReadStream(file.path);
-      fileStream.on('error', (err) => {
-        console.log('File Error', err);
-        reject(err);
-      });
-
-      uploadParams.Body = fileStream;
-      uploadParams.Key = key;
-
-      // call S3 to retrieve upload file to specified bucket
-      this.s3Client.upload(uploadParams, (err, data) => {
-        if (err) {
-          console.log("Error", err);
-          reject(err);
-        }
-        if (data) {
-          resolve(data.Location);
-        }
-      });
-    });
   }
 
-  public async fileDelete(_path: string): Promise<any> {
-    return Promise.resolve(undefined);
-  }
+  protected patchKey(key: string): string {
+    if (!this.input.force_path_style) {
+      return key;
+    }
 
-  public async fileRead(key: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-      this.s3Client.getObject({Key: key} as any, (err, data) => {
-        if (err) {
-          return reject(err);
-        }
-        if (!data?.Body) {
-          return reject(data);
-        }
-        return resolve(data.Body);
-      });
-    });
+    if (
+      S3_PATCH_KEYS.some((k) => key.startsWith(`${this.input.bucket}/nc/${k}`))
+    ) {
+      key = key.replace(`${this.input.bucket}/`, '');
+    }
+
+    return key;
   }
 
   public async init(): Promise<any> {
-
-    // const s3Options: any = {
-    //   params: {Bucket: process.env.NC_S3_BUCKET},
-    //   region: process.env.NC_S3_REGION
-    // };
-    //
-    // s3Options.accessKeyId = process.env.NC_S3_KEY;
-    // s3Options.secretAccessKey = process.env.NC_S3_SECRET;
-
-    const s3Options: any = {
-      params: {Bucket: this.input.bucket},
-      region: this.input.region
+    const s3Options: S3ClientConfig = {
+      region: this.input.region,
+      forcePathStyle: this.input.force_path_style ?? false,
     };
 
-    s3Options.accessKeyId = this.input.access_key
-    s3Options.secretAccessKey = this.input.access_secret;
+    if (this.input.access_key && this.input.access_secret) {
+      s3Options.credentials = {
+        accessKeyId: this.input.access_key,
+        secretAccessKey: this.input.access_secret,
+      };
+    }
 
+    if (this.input.endpoint) {
+      s3Options.endpoint = this.input.endpoint;
+    }
 
-    this.s3Client = new AWS.S3(s3Options);
+    this.s3Client = new S3Client(s3Options);
   }
 
-  public async test(): Promise<boolean> {
+  protected async upload(uploadParams): Promise<any> {
     try {
-      const tempFile = path.join(process.cwd(), 'temp.txt');
-      const createStream = fs.createWriteStream(tempFile);
-      createStream.end();
-      await this.fileCreate('/nc-test-file.txt', {
-        path: tempFile,
-        mimetype: '',
-        originalname: 'temp.txt',
-        size: ''
+      const upload = new Upload({
+        client: this.s3Client,
+        params: { ...this.defaultParams, ...uploadParams },
       });
-      fs.unlinkSync(tempFile);
-      return true;
-    }catch (e) {
-      throw e;
+
+      const data = await upload.done();
+
+      if (data) {
+        const endpoint = this.input.endpoint
+          ? new URL(this.input.endpoint).host
+          : `s3.${this.input.region}.amazonaws.com`;
+
+        if (this.input.force_path_style) {
+          return `https://${endpoint}/${this.input.bucket}/${uploadParams.Key}`;
+        }
+
+        return `https://${this.input.bucket}.${endpoint}/${uploadParams.Key}`;
+      } else {
+        NcError._.storageFileCreateError('Upload failed or no data returned.');
+      }
+    } catch (error) {
+      NcError._.storageFileCreateError(error.message);
     }
   }
 
+  override getUploadedPath(path: string): { path?: string; url?: string } {
+    const usePath = path.startsWith('/') ? path.replace(/$\/+/, '') : path;
+    // TODO: more configurable urls, like using path-styles and CNAME
+    // https://docs.aws.amazon.com/AmazonS3/latest/userguide/VirtualHosting.html
+    return {
+      url: `https://${this.input.bucket}.s3.${this.input.region}.amazonaws.com/${usePath}`,
+    };
+  }
 }
-
-
-/**
- * @copyright Copyright (c) 2021, Xgene Cloud Ltd
- *
- * @author Naveen MR <oof1lab@gmail.com>
- * @author Pranav C Balan <pranavxc@gmail.com>
- *
- * @license GNU AGPL version 3 or any later version
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as
- * published by the Free Software Foundation, either version 3 of the
- * License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Affero General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program. If not, see <http://www.gnu.org/licenses/>.
- *
- */

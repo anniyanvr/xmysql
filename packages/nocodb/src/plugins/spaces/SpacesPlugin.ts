@@ -1,13 +1,11 @@
-import {IStorageAdapter, XcStoragePlugin} from "nc-plugin";
-
-import Spaces from "./Spaces";
-
+import Spaces from './Spaces';
+import type { IStorageAdapterV2 } from '~/types/nc-plugin';
+import { XcStoragePlugin } from '~/types/nc-plugin';
 
 class SpacesPlugin extends XcStoragePlugin {
-
   private static storageAdapter: Spaces;
 
-  public  getAdapter(): IStorageAdapter {
+  public getAdapter(): IStorageAdapterV2 {
     return SpacesPlugin.storageAdapter;
   }
 
@@ -15,7 +13,6 @@ class SpacesPlugin extends XcStoragePlugin {
     SpacesPlugin.storageAdapter = new Spaces(config);
     await SpacesPlugin.storageAdapter.init();
   }
-
 }
 
 export default SpacesPlugin;
